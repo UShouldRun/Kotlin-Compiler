@@ -92,10 +92,9 @@ void* arena_alloc(Arena arena, uint64_t s_alloc) {
   }
    
   uint64_t* s_ptr = (uint64_t*)node->ptr;
+  void* ptr = _arena_ptr_incr(node->ptr, s_word);
+
   *s_ptr = s_alloc;
-
-  void* ptr = _arena_ptr_incr((void*)s_ptr, s_word);
-
   uint64_t blocks = _arena_bytes_to_blocks(node, s_alloc);
   _arena_set_bitmap(node, ptr, blocks, true);
   node->ptr = _arena_ptr_incr(node->ptr, _arena_blocks_to_offset(node, blocks));
@@ -108,20 +107,27 @@ void* arena_alloc_array(Arena arena, uint64_t s_obj, uint32_t count) {
 }
 
 void* arena_realloc(Arena arena, void* ptr, uint64_t s_realloc) {
-  assert(arena != NULL);
-  assert(ptr != NULL);
-  assert(_arena_ptr_in_arena(arena, ptr));
+  if (arena == NULL)
+    return NULL;
+  if (ptr == NULL)
+    return NULL;
+
+  if (!_arena_ptr_in_arena(arena, ptr))
+    return NULL;
   void* new_ptr = arena_alloc(arena, s_realloc);
   if (new_ptr == NULL)
     return NULL;
+
   uint64_t old_size = *(uint64_t*)_arena_ptr_decr(ptr, s_word);
   if (old_size > s_realloc)
     return NULL;
   memcpy(new_ptr, ptr, s_realloc);
+
   if (!arena_free(arena, ptr)) {
-    arena_free(arena, new_ptr);
+    (void)arena_free(arena, new_ptr);
     return NULL;
   }
+
   return new_ptr;
 }
 
@@ -151,7 +157,7 @@ uint64_t arena_get_size_used(Arena arena) {
   if (arena->memory == NULL)
     return 0;
   uint64_t counter = 0;
-  uint64_t l_bitmap = arena->s_bitmap/(s_word * arena->s_block);
+  uint64_t l_bitmap = arena->s_bitmap > s_word ? arena->s_bitmap/s_word : arena->s_bitmap;
   uint64_t* bitmap = (uint64_t*)arena->memory;
   for (uint64_t i = 0; i < l_bitmap; i++)
     counter += _arena_utils_bit_count(bitmap[i]);
@@ -165,11 +171,14 @@ bool arena_free(Arena arena, void* ptr) {
     return false;
 
   uint64_t* s_ptr = (uint64_t*)(_arena_ptr_decr(ptr, s_word));
+  if (*s_ptr == 0)
+    return false;
+
   uint64_t s_alloc = _arena_blocks_to_offset(arena, _arena_bytes_to_blocks(arena, *s_ptr));
 
   if (!_arena_valid_alloc(&arena, ptr))
     return false;
-  memset(ptr, 0, s_alloc);
+  memset((void*)s_ptr, 0, s_alloc);
   return _arena_set_bitmap(arena, ptr, s_alloc, false);
 }
 
@@ -289,20 +298,9 @@ uint64_t _arena_get_index(Arena* arena, void *ptr) {
   assert(_arena_ptr_in_arena(*arena, ptr));
 
   void* base_ptr = _arena_get_base_ptr(*arena);
+  ptrdiff_t offset = _arena_ptr_diff(_arena_ptr_decr(ptr, s_word), base_ptr);
 
-  if ((*arena)->is_aligned) {
-    ptrdiff_t offset = _arena_ptr_diff(ptr, base_ptr);
-    return offset/(s_word + (*arena)->s_block);
-  }
-
-  uint64_t i = 0;
-  for (
-    uint64_t* s_ptr = (uint64_t*)base_ptr; 
-    _arena_ptr_incr(s_ptr, s_word) != ptr;
-    s_ptr = _arena_ptr_incr(s_ptr, *s_ptr), i++
-  );
-
-  return i;
+  return (*arena)->is_aligned ? offset/(s_word + (*arena)->s_block) : offset;
 }
 
 uint64_t _arena_bytes_to_blocks(Arena arena, uint64_t bytes) {

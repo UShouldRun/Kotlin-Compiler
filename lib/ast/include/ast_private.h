@@ -35,13 +35,16 @@ struct astn_token {
 };
 
 // AST EXPRESSIONS
+struct astn_expr_list {
+  ASTN_Expr expr, next;
+};
+
 struct astn_expr {
   ASTN_ExprType type;
   union {
     ASTN_Token token;
     struct {
-      ASTN_Expr  arg;
-      ASTN_Expr  next;
+      ASTN_ExprList args;
       ASTN_Token func;
     } func_call;
     struct {
@@ -79,8 +82,7 @@ struct astn_stmt {
       ASTN_Stmt cases;
     } when;
     struct {
-      ASTN_Expr value;
-      ASTN_Stmt next;
+      ASTN_ExprList value;
     } ret;
     struct {
       ASTN_Token var;
@@ -103,23 +105,23 @@ struct astn_func_return {
 };
 
 struct astn_func {
-  uint32_t s_args, s_body, s_return;
-  ASTN_Stmt    body;
   ASTN_Token   ident;
   ASTN_FuncArg args; 
   ASTN_FuncRet ret;
+  ASTN_Stmt    body;
 };
 
 // AST OBJECTS
 struct astn_enum_val {
-  int64_t      atribute;
+  bool         is_atributed;
+  ASTN_Token   atribute;
   ASTN_Token   value;
   ASTN_EnumVal next;
 };
 
 struct astn_enum {
   ASTN_Token   ident;
-  ASTN_EnumVal  value;
+  ASTN_EnumVal value;
 };
 
 struct astn_obj {

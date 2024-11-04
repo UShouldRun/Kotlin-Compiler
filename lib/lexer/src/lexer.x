@@ -1,6 +1,5 @@
 %{
 #include "arena.h"
-#include "ast.h"
 #include "parser.tab.h"
 
 #define YY_DECL int yylex(YYSTYPE* yylval, YYLTYPE* yylloc, AST* ast)
@@ -12,7 +11,7 @@ alpha      [_a-zA-Z]
 digit      [0-9]
 id         {alpha}({alpha}|{digit})*
 number     {digit}+(\.{digit}+)?
-string     \"([^\\"]|\\.)*\"
+string     \"([^\\"]|\\.)*\" /* \"[^\"]*\" */
 whitespace [ \t\n\r]+
 comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
 
