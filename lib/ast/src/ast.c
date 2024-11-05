@@ -147,26 +147,34 @@ ASTN_Stmt astn_create_stmt_ret(Arena arena, ASTN_ExprList value) {
   return node;
 }
 
+ASTN_Expr astn_create_stmt_fcall(Arena arena, ASTN_Token func, ASTN_ExprList args, ASTN_Stmt next) {
+  error_assert(error_nullptr, arena != NULL);
+  error_assert(error_nullptr, var != NULL);
+  ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
+  error_assert(error_mem, node != NULL);
+  node->type                = STMT_FUNC_CALL;
+  node->next                = next;
+  node->stmt.func_call.arg  = args;
+  node->stmt.func_call.func = func;
+  return node;
+}
+
 ASTN_Stmt astn_create_stmt_assign(Arena arena, ASTN_Type type, ASTN_Token var, ASTN_Ktype ktype, ASTN_Expr value, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, var != NULL);
   error_assert(
     error_unexp,
-    type == STMT_INCR || type == STMT_DECR || type == STMT_DIRECT_ASSIGN || type == STMT_DECL || type == STMT_DECL_ASSIGN
+    type == STMT_VAR_INCR_BEFORE || type == STMT_VAR_INCR_AFTER || type == STMT_VAR_DECR_BEFORE || type == STMT_VAR_DECR_AFTER ||
+    type == STMT_VAR_EQUALS_PLUS || type == STMT_VAR_EQUALS_MINUS || type == STMT_VAT_EQUALS_MUL ||  type == STMT_VAR_EQUALS_DIV ||
+    type == STMT_VAR_DIRECT_ASSIGN || type == STMT_VAR_DECL || type == STMT_VAR_DECL_ASSIGN
   );
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
-
-  node->type            = type;
-  node->next            = next;
-  node->stmt.assign.var = var;
-
-  if (type == STMT_INCR || type == STMT_DECR)
-    return node;
-
-  node->stmt.assign.ktype = type == STMT_DIRECT_ASSIGN ? KOTLIN_DECL : ktype;
+  node->type              = type;
+  node->next              = next;
+  node->stmt.assign.var   = var;
+  node->stmt.assign.ktype = ktype; 
   node->stmt.assign.value = value;
-
   return node;
 }
 

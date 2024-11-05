@@ -30,6 +30,18 @@ void yyerror(YYLTYPE* yylloc, AST* ast, const char* error_msg);
 %left TT_STAR TT_SLASH
 %right TT_BANG
 
+/*    
+    | TT_FOR TT_LPAREN kotlin_type TT_IDENTIFIER TT_IN TT_IDENTIFIER TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_stmt
+    { $$ = astn_create_stmt_for(arena, $3, $5, $7, $10, $12); }
+  ;
+
+    | TT_IF TT_LPAREN kotlin_expression TT_RPAREN kotlin_stmt kotlin_elseif_else kotlin_stmt
+    { $$ = astn_create_stmt_if(arena, STMT_IF, $3, $6, $8, $9); }
+    | TT_ELSEIF TT_LPAREN kotlin_expression TT_RPAREN kotlin_stmt kotlin_elseif_else
+    | TT_ELSE kotlin_stmt
+
+*/
+
 %%
 
 kotlin_input:
@@ -38,23 +50,23 @@ kotlin_input:
     ;
 
 kotlin_program:
-      TT_FUN TT_IDENTIFIER kotlin_fun_params kotlin_$$ = _type kotlin_stmt_block kotlin_program
+      TT_FUN TT_IDENTIFIER kotlin_fun_params kotlin_return_type TT_LBRACE kotlin_stmt TT_RBRACE kotlin_program
       { $$ =  astn_create_func(arena, $2, $3, $4, $5, $6); }
-    | TT_FUN TT_IDENTIFIER kotlin_fun_params kotlin_$$ = _type kotlin_stmt_block                
+    | TT_FUN TT_IDENTIFIER kotlin_fun_params kotlin_return_type TT_LBRACE kotlin_stmt TT_RBRACE
       { $$ =  astn_create_func(arena, $2, $3, $4, $5, NULL); }
-    | TT_FUN TT_IDENTIFIER kotlin_fun_params kotlin_$$ = _type                   kotlin_program
+    | TT_FUN TT_IDENTIFIER kotlin_fun_params kotlin_return_type TT_SEMICOLON kotlin_program
       { $$ =  astn_create_func(arena, $2, $3, $4, NULL, NULL); }
-    | TT_FUN TT_IDENTIFIER kotlin_fun_params kotlin_$$ = _type                   
+    | TT_FUN TT_IDENTIFIER kotlin_fun_params kotlin_return_type TT_SEMICOLON      
       { $$ =  astn_create_func(arena, $2, $3, $4, NULL, NULL); }
 
-    | TT_ENUM TT_IDENTIFIER TT_LBRACE kotlin_enum_block TT_RBRACE                 kotlin_program
+    | TT_ENUM TT_IDENTIFIER TT_LBRACE kotlin_enum_block TT_RBRACE kotlin_program
       { $$ =  astn_create_enum($2, $4, $6); }
     | TT_ENUM TT_IDENTIFIER TT_LBRACE kotlin_enum_block TT_RBRACE                  
       { $$ =  astn_create_enum(arena, $2, $4, NULL); }
     ;
 
 kotlin_main: // Kotlin Main Function Rule
-      TT_FUN TT_MAIN kotlin_fun_params kotlin_$$ = _type kotlin_stmt_block
+      TT_FUN TT_MAIN kotlin_fun_params kotlin_return_type TT_LBRACE kotlin_stmt TT_RBRACE
       { $$ =  astn_create_func(arena, $2, $3, $4, $5, NULL); }
     ;
 
@@ -76,20 +88,6 @@ kotlin_fun_params:
       { $$ =  NULL; }
     ;
 
-kotlin_fun_call:
-      TT_IDENTIFIER TT_LPAREN kotlin_fun_call_args TT_RPAREN
-      { $$ =  astn_create_expr_fcall(arena, $1, $3); }
-    | TT_IDENTIFIER TT_LPAREN TT_RPAREN
-      { $$ =  astn_create_expr_fcall(arena, $1, NULL); }
-    ;
-
-kotlin_fun_call_args:
-      kotlin_expression TT_COMMA kotlin_fun_call_args
-      { $$ =  astn_create_expr_list(arena, $1, $3); }
-    | kotlin_expression
-      { $$ =  astn_create_expr_list(arena, $1, NULL); }
-    ;
-
 kotlin_parameter_list:
       TT_IDENTIFIER TT_COLON kotlin_type TT_COMMA kotlin_parameter_list
       { $$ =  astn_create_func_args(arena, $3, $1, $5); }
@@ -98,59 +96,139 @@ kotlin_parameter_list:
     ;
 
 kotlin_type:
-      TT_BYTE | TT_SHORT | TT_INT | TT_LONG
-    | TT_FLOAT | TT_DOUBLE
-    | TT_BOOLEAN
-    | TT_CHAR | TT_STRING
-    | TT_IDENTIFIER
-    | TT_ANY
+      kotlin_type_default { $$ = astn_create_ktype(arena, true, $1, NULL); }
+    | TT_IDENTIFIER       { $$ = astn_create_ktype(arena, true, NULL, $1); }
+    ;
+
+kotlin_type_default:
+      TT_BYTE     { $$ = KOTLIN_BYTE; }
+    | TT_SHORT    { $$ = KOTLIN_SHORT; }
+    | TT_INT      { $$ = KOTLIN_INT; }
+    | TT_LONG     { $$ = KOTLIN_LONG; }
+    | TT_FLOAT    { $$ = KOTLIN_FLOAT; }
+    | TT_DOUBLE   { $$ = KOTLIN_DOUBLE; }
+    | TT_BOOLEAN  { $$ = KOTLIN_BOOLEAN; }
+    | TT_CHAR     { $$ = KOTLIN_CHAR; }
+    | TT_STRING   { $$ = KOTLIN_STRING; }
+    | TT_ANY      { $$ = KOTLIN_ANY; }
+    ;
+
+kotlin_stmt:
+      TT_IDENTIFIER TT_LPAREN kotlin_fun_call_args TT_RPAREN TT_SEMICOLON kotlin_stmt 
+      { $$ =  astn_create_stmt_fcall(arena, $1, $3, $5); }
+    | TT_IDENTIFIER TT_LPAREN kotlin_fun_call_args TT_RPAREN TT_SEMICOLON 
+      { $$ =  astn_create_stmt_fcall(arena, $1, $3, NULL); }
+    | kotlin_stmt_var
+    | kotlin_while
+    | kotlin_for
+    | kotlin_do
+    | kotlin_if
+    | kotlin_when
+    | kotlin_return
+    | { $$ = NULL; }
+    ;
+
+kotlin_stmt_var:
+      TT_VAR TT_IDENTIFIER TT_COLON kotlin_type TT_ASSIGN kotlin_expression TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECL_ASSIGN, $2, $4, $6, $8); }
+    | TT_VAR TT_IDENTIFIER TT_COLON kotlin_type                             TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECL, $2, $4, NULL, $6); }
+    | TT_IDENTIFIER TT_ASSIGN       kotlin_expression                       TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DIRECT_ASSIGN, $1, KOTLIN_DECL, $3, $5); }
+    | TT_IDENTIFIER TT_EQUALS_PLUS  kotlin_expression                       TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_PLUS, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_MINUS kotlin_expression                       TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_MINUS, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_MUL   kotlin_expression                       TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_MUL, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_DIV   kotlin_expression                       TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_DIV, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_INCR                                                 TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_INCR_AFTER, $1, KOTLIN_DECL, 1); }
+    | TT_IDENTIFIER TT_DECR                                                 TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECR_AFTER, $1, KOTLIN_DECL, 1); }
+    | TT_INCR TT_IDENTIFIER                                                 TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_INCR_BEFORE, $1, KOTLIN_DECL, 1); }
+    | TT_DECR TT_IDENTIFIER                                                 TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECR_BEFORE, $1, KOTLIN_DECL, 1); }
     ;
 
 kotlin_while:
-      TT_WHILE TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt_block TT_RBRACE
+      TT_WHILE TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_stmt
+      { $$ = astn_create_stmt_while(arena, false, $3, $6, $8); }
     ;
 
 kotlin_do:
-      TT_DO TT_LBRACE kotlin_stmt_block TT_RBRACE TT_WHILE TT_LPAREN kotlin_expression TT_RPAREN TT_SEMICOLON
+      TT_DO TT_LBRACE kotlin_stmt TT_RBRACE TT_WHILE TT_LPAREN kotlin_expression TT_RPAREN TT_SEMICOLON kotlin_stmt
+      { $$ = astn_create_stmt_while(arena, true, $3, $6, $8); }
     ;
 
 kotlin_for:
-      TT_FOR TT_LPAREN kotlin_for_init TT_SEMICOLON kotlin_expression TT_SEMICOLON kotlin_for_incr TT_RPAREN TT_LBRACE kotlin_stmt_block TT_RBRACE
-    | TT_FOR TT_LPAREN kotlin_type TT_IDENTIFIER TT_IN TT_IDENTIFIER TT_RPAREN TT_LBRACE kotlin_stmt_block TT_RBRACE
+      TT_FOR TT_LPAREN kotlin_for_init TT_SEMICOLON kotlin_expression TT_SEMICOLON kotlin_for_incr TT_RPAREN TT_LBRACE 
+        kotlin_stmt 
+      TT_RBRACE kotlin_stmt
+      { $$ = astn_create_stmt_for(arena, $3, $5, $7, $10, $12); }
     ;
 
 kotlin_for_init:
-        kotlin_for_init_no_null
-      |
-      ;
+      TT_VAR TT_IDENTIFIER TT_COLON kotlin_type TT_ASSIGN kotlin_expression TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECL_ASSIGN, $2, $4, $6, $8); }
+    | TT_VAR TT_IDENTIFIER TT_COLON kotlin_type                             TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECL, $2, $4, NULL, $6); }
+    |  TT_IDENTIFIER TT_ASSIGN       kotlin_expression                      TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DIRECT_ASSIGN, $1, KOTLIN_DECL, $3, $5); }
+    | TT_IDENTIFIER TT_EQUALS_PLUS  kotlin_expression                       TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_PLUS, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_MINUS kotlin_expression                       TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_MINUS, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_MUL   kotlin_expression                       TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_MUL, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_DIV   kotlin_expression                       TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_DIV, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_INCR                                                 TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_INCR_AFTER, $1, KOTLIN_DECL, 1); }
+    | TT_IDENTIFIER TT_DECR                                                 TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECR_AFTER, $1, KOTLIN_DECL, 1); }
+    | TT_INCR TT_IDENTIFIER                                                 TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_INCR_BEFORE, $1, KOTLIN_DECL, 1); }
+    | TT_DECR TT_IDENTIFIER                                                 TT_COMMA kotlin_for_init
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECR_BEFORE, $1, KOTLIN_DECL, 1); }
+    | { $$ = NULL; }
+    ;
 
 kotlin_for_incr:
-        kotlin_for_incr_no_null
-      |
-      ; 
-
-kotlin_for_init_no_null:
-        kotlin_type TT_IDENTIFIER TT_ASSIGN kotlin_expression TT_COMMA kotlin_for_init_no_null
-      | kotlin_type TT_IDENTIFIER TT_ASSIGN kotlin_expression
-      | TT_IDENTIFIER TT_ASSIGN kotlin_expression
-      ;
-
-kotlin_for_incr_no_null:
-        kotlin_stmt TT_COMMA kotlin_for_incr_no_null
-      | kotlin_stmt
-      ;
+      TT_IDENTIFIER TT_ASSIGN       kotlin_expression                       TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DIRECT_ASSIGN, $1, KOTLIN_DECL, $3, $5); }
+    | TT_IDENTIFIER TT_EQUALS_PLUS  kotlin_expression                       TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_PLUS, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_MINUS kotlin_expression                       TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_MINUS, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_MUL   kotlin_expression                       TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_MUL, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_EQUALS_DIV   kotlin_expression                       TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_EQUALS_DIV, $1, KOTLIN_DECL, $3); }
+    | TT_IDENTIFIER TT_INCR                                                 TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_INCR_AFTER, $1, KOTLIN_DECL, 1); }
+    | TT_IDENTIFIER TT_DECR                                                 TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECR_AFTER, $1, KOTLIN_DECL, 1); }
+    | TT_INCR TT_IDENTIFIER                                                 TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_INCR_BEFORE, $1, KOTLIN_DECL, 1); }
+    | TT_DECR TT_IDENTIFIER                                                 TT_COMMA kotlin_for_incr
+      { $$ = astn_create_stmt_assign(arena, STMT_VAR_DECR_BEFORE, $1, KOTLIN_DECL, 1); }
+    | { $$ = NULL; }
+    ;
         
 kotlin_if:
-      TT_IF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt_block TT_RBRACE kotlin_elseif_else
-    | TT_IF TT_LPAREN kotlin_expression TT_RPAREN kotlin_stmt kotlin_elseif_else
+      TT_IF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_elseif_else kotlin_stmt
+      { $$ = astn_create_stmt_if(arena, STMT_IF, $3, $6, $8, $9); }
     ;
 
 kotlin_elseif_else:
-      TT_ELSEIF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt_block TT_RBRACE kotlin_elseif_else
-      TT_ELSEIF TT_LPAREN kotlin_expression TT_RPAREN kotlin_stmt kotlin_elseif_else
-    | TT_ELSE TT_LBRACE kotlin_stmt_block TT_RBRACE
-    | TT_ELSE kotlin_stmt
-    |
+      TT_ELSEIF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_elseif_else
+      { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, $3, $6, $8, NULL); }
+    | TT_ELSE TT_LBRACE kotlin_stmt TT_RBRACE
+      { $$ = astn_create_stmt_if(arena, STMT_ELSE, NULL, $6, NULL, NULL); }
+    | { $$ = NULL; }
     ;
 
 kotlin_when:
@@ -163,9 +241,9 @@ kotlin_when_block:
     ;
 
 kotlin_when_branch:
-      kotlin_expression TT_ARROW TT_LBRACE kotlin_stmt_block TT_RBRACE
+      kotlin_expression TT_ARROW TT_LBRACE kotlin_stmt TT_RBRACE
     | kotlin_expression TT_ARROW kotlin_stmt TT_SEMICOLON
-    | TT_ELSE TT_ARROW TT_LBRACE kotlin_stmt_block TT_RBRACE
+    | TT_ELSE TT_ARROW TT_LBRACE kotlin_stmt TT_RBRACE
     | TT_ELSE TT_ARROW kotlin_stmt TT_SEMICOLON
     ;
 
@@ -183,39 +261,6 @@ kotlin_return_type:
 kotlin_return_type_repeat:
       kotlin_type TT_COMMA kotlin_$$ = _type_repeat
     | kotlin_type
-    ;
-
-kotlin_stmt_block:
-      kotlin_stmt TT_SEMICOLON kotlin_stmt_block
-    | 
-    ;
-
-kotlin_stmt:
-      kotlin_stmt_list kotlin_stmt
-    | kotlin_$$ = 
-    ;
-
-kotlin_stmt_list:
-      kotlin_stmt_var
-    | kotlin_while
-    | kotlin_for
-    | kotlin_do
-    | kotlin_if
-    | kotlin_when
-    | kotlin_fun_call // Expression
-    ;
-
-kotlin_stmt_var:
-      TT_VAR TT_COLON kotlin_type TT_IDENTIFIER TT_ASSIGN kotlin_expression TT_SEMICOLON
-    | TT_VAR TT_COLON kotlin_type TT_IDENTIFIER TT_SEMICOLON
-    | TT_IDENTIFIER TT_INCR TT_SEMICOLON
-    | TT_IDENTIFIER TT_DECR TT_SEMICOLON
-    | TT_INCR TT_IDENTIFIER TT_SEMICOLON
-    | TT_DECR TT_IDENTIFIER TT_SEMICOLON
-    | TT_IDENTIFIER TT_EQUALS_PLUS kotlin_expression  TT_SEMICOLON
-    | TT_IDENTIFIER TT_EQUALS_MINUS kotlin_expression TT_SEMICOLON
-    | TT_IDENTIFIER TT_EQUALS_MUL kotlin_expression   TT_SEMICOLON
-    | TT_IDENTIFIER TT_EQUALS_DIV kotlin_expression   TT_SEMICOLON
     ;
 
 kotlin_expression: // Kotlin Expression Rules
@@ -242,7 +287,6 @@ kotlin_expression: // Kotlin Expression Rules
     | TT_LPAREN kotlin_expression TT_RPAREN
 
     | kotlin_fun_call
-    // | TT_IDENTIFIER TT_DOT TT_IDENTIFIER
     | TT_TRUE
     | TT_FALSE
     | TT_NULL
@@ -250,6 +294,16 @@ kotlin_expression: // Kotlin Expression Rules
     | TT_REAL
     | TT_STRING_LIT
     | TT_IDENTIFIER
+    ;
+
+kotlin_fun_call:
+      TT_IDENTIFIER TT_LPAREN kotlin_fun_call_args TT_RPAREN  { $$ =  astn_create_expr_fcall(arena, $1, $3); }
+    | TT_IDENTIFIER TT_LPAREN TT_RPAREN                       { $$ =  astn_create_expr_fcall(arena, $1, NULL); }
+    ;
+
+kotlin_fun_call_args:
+      kotlin_expression TT_COMMA kotlin_fun_call_args { $$ =  astn_create_expr_list(arena, $1, $3); }
+    | kotlin_expression                               { $$ =  astn_create_expr_list(arena, $1, NULL); }
     ;
 
 %%

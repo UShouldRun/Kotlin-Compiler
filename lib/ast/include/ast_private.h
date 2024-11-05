@@ -89,6 +89,10 @@ struct astn_stmt {
       ASTN_KType ktype;
       ASTN_Expr  value;
     } assign; 
+    struct {
+      ASTN_ExprList args;
+      ASTN_Token func;
+    } func_call;
   } stmt;
   ASTN_Stmt next;
 };

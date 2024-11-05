@@ -21,9 +21,12 @@ typedef enum astn_object_type {
 typedef enum astn_stmt_type {
   STMT_WHILE, STMT_FOR, STMT_DO,
   STMT_IF, STMT_ELSEIF, STMT_ELSE, STMT_WHEN, STMT_CASE
-  STMT_RETURN,
-  STMT_INCR, STMT_DECR,
-  STMT_DIRECT_ASSIGN, STMT_DECL, STMT_DECL_ASSIGN
+  STMT_RETURN, STMT_FUNC_CALL,
+  STMT_VAR_INCR_BEFORE, STMT_VAR_DECR_BEFORE,
+  STMT_VAR_INCR_AFTER,  STMT_VAR_DECR_AFTER,
+  STMT_VAR_EQUALS_PLUS, STMT_VAR_EQUALS_MINUS,
+  STMT_VAT_EQUALS_MUL,  STMT_VAR_EQUALS_DIV,
+  STMT_VAR_DIRECT_ASSIGN, STMT_VAR_DECL, STMT_VAR_DECL_ASSIGN
 } ASTN_StmtType;
 
 typedef enum astn_expr_type {
@@ -91,6 +94,7 @@ ASTN_Stmt     astn_create_stmt_for    (Arena, ASTN_Stmt, ASTN_Expr, ASTN_Stmt, A
 ASTN_Stmt     astn_create_stmt_if     (Arena, ASTN_StmtType, ASTN_Expr, ASTN_Stmt, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_when   (Arena, ASTN_Expr, ASTN_Stmt, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_ret    (Arena, ASTN_ExprList);
+ASTN_Expr     astn_create_stmt_fcall  (Arena, ASTN_Token, ASTN_ExprList, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_assign (Arena, ASTN_Type, ASTN_Token, ASTN_Ktype, ASTN_Expr, ASTN_Stmt);
 
 ASTN_Expr     astn_create_expr_bin    (Arena, ASTN_ExprOp, ASTN_Expr, ASTN_Expr);
