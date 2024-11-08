@@ -103,7 +103,7 @@ $(PARSER_DIR)/build/parser.tab.c: $(PARSER_SRC)
 	@echo "Generated Parser C file"
 
 $(PARSER_DIR)/build/parser.o: $(PARSER_DIR)/build/parser.tab.c
-	@$(CC) $(CFLAGS) $(DEBUG) -o $@ -c $< $(PARSER_DEP)
+	@$(CC) -Wall $(DEBUG) -o $@ -c $< $(PARSER_DEP)
 	@echo "Compiled Parser"
 
 $(TEST_DIR)/arena/tarena.o: $(TEST_DIR)/arena/tarena.c
@@ -137,9 +137,10 @@ clean_test:
 # Phony targets for testing individual components
 .PHONY: all clean clean_test arena ast error lexer parser tarena run-tarena
 
-arena:  $(ARENA_DIR)/build/libarena.a
-ast:	  $(AST_DIR)/build/libast.a
-error:  $(ERROR_DIR)/build/liberror.a
-lexer:  $(LEXER_DIR)/build/lexer.yy.c
-parser: $(PARSER_DIR)/build/parser.o
-tarena: $(TEST_DIR)/arena/tarena
+arena:  		$(ARENA_DIR)/build/libarena.a
+ast:	  		$(AST_DIR)/build/libast.a
+error:  		$(ERROR_DIR)/build/liberror.a
+lexer:  		$(LEXER_DIR)/build/lexer.yy.c
+parser: 		$(PARSER_DIR)/build/parser.o
+parser_tab: $(PARSER_DIR)/build/parser.tab.c
+tarena: 		$(TEST_DIR)/arena/tarena

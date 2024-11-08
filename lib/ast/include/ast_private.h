@@ -16,8 +16,8 @@
 struct astn_ktype {
   bool              is_default;
   union {
-    ASTN_Token        defined;
-    ASTN_KTypeDefault default;
+    ASTN_Token        _defined;
+    ASTN_KTypeDefault _default;
   } type;
 };
 
@@ -27,6 +27,8 @@ struct astn_token {
   union {
     uint64_t    lit_number;
     double      lit_real;
+    bool        lit_bool;
+    bool        lit_null;
     const char* lit_str,
               * ident;
   } value;
@@ -45,8 +47,8 @@ struct astn_expr {
     ASTN_Token token;
     struct {
       ASTN_ExprList args;
-      ASTN_Token func;
-    } func_call;
+      ASTN_Token    fun;
+    } fun_call;
     struct {
       ASTN_ExprOp op;
       ASTN_Expr   operand;
@@ -65,54 +67,55 @@ struct astn_stmt {
     struct {
       ASTN_Expr cond;
       ASTN_Stmt block;
-    } while;
+    } _while;
     struct {
       ASTN_Stmt init;
       ASTN_Expr cond;
       ASTN_Stmt incr;
       ASTN_Stmt block;
-    } for;
+    } _for;
     struct {
       ASTN_Expr cond;
       ASTN_Stmt block;
       ASTN_Stmt next;
-    } if;
+    } _if;
     struct {
       ASTN_Expr cond;
       ASTN_Stmt cases;
-    } when;
+    } _when;
     struct {
       ASTN_ExprList value;
-    } ret;
+    } _ret;
     struct {
       ASTN_Token var;
       ASTN_KType ktype;
       ASTN_Expr  value;
-    } assign; 
+    } _assign; 
     struct {
       ASTN_ExprList args;
-      ASTN_Token func;
-    } func_call;
+      ASTN_Token    fun;
+    } _fun_call;
+    ASTN_Stmt block;
   } stmt;
   ASTN_Stmt next;
 };
 
-struct astn_func_arg {
+struct astn_fun_arg {
   ASTN_KType   type;
   ASTN_Token   arg;
-  ASTN_FuncArg next;
+  ASTN_FunArg next;
 };
 
-struct astn_func_return {
-  ASTN_KType   type;
-  ASTN_FuncRet next;
+struct astn_fun_ret {
+  ASTN_KType  type;
+  ASTN_FunRet next;
 };
 
-struct astn_func {
-  ASTN_Token   ident;
-  ASTN_FuncArg args; 
-  ASTN_FuncRet ret;
-  ASTN_Stmt    body;
+struct astn_fun {
+  ASTN_Token  ident;
+  ASTN_FunArg args; 
+  ASTN_FunRet ret;
+  ASTN_Stmt   body;
 };
 
 // AST OBJECTS
@@ -125,14 +128,14 @@ struct astn_enum_val {
 
 struct astn_enum {
   ASTN_Token   ident;
-  ASTN_EnumVal value;
+  ASTN_EnumVal values;
 };
 
 struct astn_obj {
   ASTN_Type type;
   union {
-    struct astn_func func;
-    struct astn_enum enum;
+    struct astn_fun _fun;
+    struct astn_enum _enum;
   } obj;
   ASTN_Obj next;
 };
@@ -141,17 +144,17 @@ struct astn_obj {
 struct astn_program {
   const char* name;
   ASTN_Obj    objects;
-  ASTN_Func   main;
+  ASTN_Obj    main;
 };
 
 static uint64_t astn_sizes[] = {
   sizeof(struct astn_program),
   sizeof(struct astn_obj),
   sizeof(struct astn_enum),
-  sizeof(struct astn_enum_value),
-  sizeof(struct astn_func),
-  sizeof(struct astn_func_return),
-  sizeof(struct astn_func_args),
+  sizeof(struct astn_enum_val),
+  sizeof(struct astn_fun),
+  sizeof(struct astn_fun_ret),
+  sizeof(struct astn_fun_arg),
   sizeof(struct astn_stmt),
   sizeof(struct astn_expr),
   sizeof(struct astn_ktype),

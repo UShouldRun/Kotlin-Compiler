@@ -1,8 +1,7 @@
 %{
 #include "arena.h"
 #include "parser.tab.h"
-
-#define YY_DECL int yylex(YYSTYPE* yylval, YYLTYPE* yylloc, AST* ast)
+/* string \"[^\"]*\" - may use this one*/
 %}
 
 %option caseless
@@ -11,7 +10,7 @@ alpha      [_a-zA-Z]
 digit      [0-9]
 id         {alpha}({alpha}|{digit})*
 number     {digit}+(\.{digit}+)?
-string     \"([^\\"]|\\.)*\" /* \"[^\"]*\" */
+string     \"([^\\"]|\\.)*\"
 whitespace [ \t\n\r]+
 comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
 
@@ -79,9 +78,9 @@ comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
 
 {whitespace}   ;
 {comment}      ;
-{id}           { return TT_IDENTIFIER; }
-{number}       { yylval.num = atoi(yytext); return TT_NUMBER; }
-{string}       { return TT_STRING_LIT; }
+{id}           { yylval.str = strdup(yytext); return TT_IDENTIFIER; }
+{number}       { yylval.num = atoi(yytext);   return TT_NUMBER; }
+{string}       { yylval.str = strdup(yytext); return TT_STRING_LIT; }
 
 .              { /* Ignore any other character */ }
 

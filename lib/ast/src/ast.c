@@ -14,8 +14,9 @@ uint64_t astn_max_size() {
   return max;
 }
 
-AST ast_create(Arena arena, const char* name, ASTN_Obj objects, ASTN_Func main) {
+AST ast_create(Arena arena, const char* name, ASTN_Obj objects, ASTN_Obj main) {
   error_assert(error_nullptr, arena != NULL);
+  error_assert(error_nullptr, main != NULL);
   AST program = (AST)arena_alloc(arena, sizeof(struct astn_program));
   if (program == NULL)
     return NULL;
@@ -25,21 +26,22 @@ AST ast_create(Arena arena, const char* name, ASTN_Obj objects, ASTN_Func main) 
   return program;
 }
 
-ASTN_Obj astn_create_enum(Arena arena, ASTN_Token ident, ASTN_EnumVal values) {
+ASTN_Obj astn_create_enum(Arena arena, ASTN_Token ident, ASTN_EnumVal values, ASTN_Obj next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, ident != NULL);
   ASTN_Obj node = (ASTN_Obj)arena_alloc(arena, sizeof(struct astn_obj));
   error_assert(error_mem, node != NULL);
-  node->type               = ASTN_ENUM;
-  node->obj.enum.ident     = ident;
-  node->obj.enum.values    = values;
+  node->type             = ASTN_ENUM;
+  node->obj._enum.ident  = ident;
+  node->obj._enum.values = values;
+  node->next             = next;
   return node;
 }
 
 ASTN_EnumVal astn_create_enum_val(Arena arena, ASTN_Token value, ASTN_Token atribute, bool is_atributed, ASTN_EnumVal next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, value != NULL);
-  ASTN_Obj node = (ASTN_Obj)arena_alloc(arena, sizeof(struct astn_enum_val));
+  ASTN_EnumVal node = (ASTN_EnumVal)arena_alloc(arena, sizeof(struct astn_enum_val));
   error_assert(error_mem, node != NULL);
   node->is_atributed = is_atributed;
   node->atribute     = atribute;
@@ -48,26 +50,26 @@ ASTN_EnumVal astn_create_enum_val(Arena arena, ASTN_Token value, ASTN_Token atri
   return node;
 }
 
-ASTN_Obj astn_create_func(Arena arena, ASTN_Token ident, ASTN_FuncArg args, ASTN_FuncRet ret, ASTN_Stmt body, ASTN_Obj next) {
+ASTN_Obj astn_create_fun(Arena arena, ASTN_Token ident, ASTN_FunArg args, ASTN_FunRet ret, ASTN_Stmt body, ASTN_Obj next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, ident != NULL);
   error_assert(error_nullptr, args != NULL);
   error_assert(error_nullptr, ret != NULL);
-  ASTN_Func node = (ASTN_Func)arena_alloc(arena, sizeof(struct astn_func));
+  ASTN_Obj node = (ASTN_Obj)arena_alloc(arena, sizeof(struct astn_obj));
   error_assert(error_mem, node != NULL);
-  node->obj.fun.ident = ident;
-  node->obj.fun.args  = args;
-  node->obj.fun.ret   = ret;
-  node->obj.fun.body  = body;
-  node->next          = next;
+  node->obj._fun.ident = ident;
+  node->obj._fun.args  = args;
+  node->obj._fun.ret   = ret;
+  node->obj._fun.body  = body;
+  node->next           = next;
   return node;
 }
 
-ASTN_FuncArg astn_create_func_args(Arena arena, ASTN_KType type, ASTN_Token arg, ASTN_FuncArg next) {
+ASTN_FunArg astn_create_fun_args(Arena arena, ASTN_KType type, ASTN_Token arg, ASTN_FunArg next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, type != NULL);
   error_assert(error_nullptr, arg != NULL);
-  ASTN_Func node = (ASTN_Func)arena_alloc(arena, sizeof(struct astn_func_arg));
+  ASTN_FunArg node = (ASTN_FunArg)arena_alloc(arena, sizeof(struct astn_fun_arg));
   error_assert(error_mem, node != NULL);
   node->type = type;
   node->arg  = arg;
@@ -75,10 +77,10 @@ ASTN_FuncArg astn_create_func_args(Arena arena, ASTN_KType type, ASTN_Token arg,
   return node;
 }
 
-ASTN_FuncRet astn_create_func_ret(Arena arena, ASTN_KType type, ASTN_FuncRet next) {
+ASTN_FunRet astn_create_fun_ret(Arena arena, ASTN_KType type, ASTN_FunRet next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, type != NULL);
-  ASTN_FuncRet node = (ASTN_FuncRet)arena_alloc(arena, sizeof(struct astn_func_return));
+  ASTN_FunRet node = (ASTN_FunRet)arena_alloc(arena, sizeof(struct astn_fun_ret));
   error_assert(error_mem, node != NULL);
   node->type = type;
   node->next = next;
@@ -91,8 +93,8 @@ ASTN_Stmt astn_create_stmt_while(Arena arena, bool do_while, ASTN_Expr cond, AST
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type             = do_while ? STMT_DO : STMT_WHILE;
-  node->stmt.while.cond  = cond;
-  node->stmt.while.block = block;
+  node->stmt._while.cond  = cond;
+  node->stmt._while.block = block;
   node->next             = next;
   return node;
 }
@@ -103,10 +105,10 @@ ASTN_Stmt astn_create_stmt_for(Arena arena, ASTN_Stmt init, ASTN_Expr cond, ASTN
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type           = STMT_FOR;
-  node->stmt.for.init  = init;
-  node->stmt.for.cond  = cond;
-  node->stmt.for.incr  = incr;
-  node->stmt.for.block = block;
+  node->stmt._for.init  = init;
+  node->stmt._for.cond  = cond;
+  node->stmt._for.incr  = incr;
+  node->stmt._for.block = block;
   node->next           = next;
   return node;
 }
@@ -118,9 +120,9 @@ ASTN_Stmt astn_create_stmt_if(Arena arena, ASTN_StmtType type, ASTN_Expr cond, A
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type          = type;
-  node->stmt.if.cond  = type == STMT_ELSE ? NULL : cond;
-  node->stmt.if.block = block;
-  node->stmt.if.next  = type == STMT_ELSE ? NULL : elseif;
+  node->stmt._if.cond  = type == STMT_ELSE ? NULL : cond;
+  node->stmt._if.block = block;
+  node->stmt._if.next  = type == STMT_ELSE ? NULL : elseif;
   node->next          = next;
   return node;
 }
@@ -131,8 +133,8 @@ ASTN_Stmt astn_create_stmt_when(Arena arena, ASTN_Expr cond, ASTN_Stmt cases, AS
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type            = STMT_WHEN;
-  node->stmt.when.cond  = cond;
-  node->stmt.when.cases = cases;
+  node->stmt._when.cond  = cond;
+  node->stmt._when.cases = cases;
   node->next            = next;
   return node;
 }
@@ -142,24 +144,24 @@ ASTN_Stmt astn_create_stmt_ret(Arena arena, ASTN_ExprList value) {
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type           = STMT_RETURN;
-  node->stmt.ret.value = value;
+  node->stmt._ret.value = value;
   node->next           = NULL;
   return node;
 }
 
-ASTN_Expr astn_create_stmt_fcall(Arena arena, ASTN_Token func, ASTN_ExprList args, ASTN_Stmt next) {
+ASTN_Stmt astn_create_stmt_fcall(Arena arena, ASTN_Token fun, ASTN_ExprList args, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, var != NULL);
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
-  node->type                = STMT_FUNC_CALL;
+  node->type                = STMT_FUN_CALL;
   node->next                = next;
-  node->stmt.func_call.arg  = args;
-  node->stmt.func_call.func = func;
+  node->stmt._fun_call.args = args;
+  node->stmt._fun_call.fun  = fun;
   return node;
 }
 
-ASTN_Stmt astn_create_stmt_assign(Arena arena, ASTN_Type type, ASTN_Token var, ASTN_Ktype ktype, ASTN_Expr value, ASTN_Stmt next) {
+ASTN_Stmt astn_create_stmt_assign(Arena arena, ASTN_Type type, ASTN_Token var, ASTN_KType ktype, ASTN_Expr value, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, var != NULL);
   error_assert(
@@ -172,9 +174,19 @@ ASTN_Stmt astn_create_stmt_assign(Arena arena, ASTN_Type type, ASTN_Token var, A
   error_assert(error_mem, node != NULL);
   node->type              = type;
   node->next              = next;
-  node->stmt.assign.var   = var;
-  node->stmt.assign.ktype = ktype; 
-  node->stmt.assign.value = value;
+  node->stmt._assign.var   = var;
+  node->stmt._assign.ktype = ktype; 
+  node->stmt._assign.value = value;
+  return node;
+}
+
+ASTN_Stmt astn_create_stmt_block(Arena arena, ASTN_Stmt block, ASTN_Stmt next) {
+  error_assert(error_nullptr, arena != NULL);
+  ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
+  error_assert(error_mem, node != NULL);
+  node->type       = STMT_BLOCK;
+  node->stmt.block = block;
+  node->next       = next;
   return node;
 }
 
@@ -201,14 +213,15 @@ ASTN_Expr astn_create_expr_un(Arena arena, ASTN_ExprOp op, ASTN_Expr operand) {
   return node;
 }
 
-ASTN_Expr astn_create_expr_fcall(Arena arena, ASTN_Token func, ASTN_ExprList arg) {
+ASTN_Expr astn_create_expr_fcall(Arena arena, ASTN_Token fun, ASTN_ExprList args) {
   error_assert(error_nullptr, arena != NULL);
-  error_assert(error_nullptr, func != NULL);
+  error_assert(error_nullptr, fun != NULL);
   ASTN_Expr node = (ASTN_Expr)arena_alloc(arena, sizeof(struct astn_expr));
   error_assert(error_mem, node != NULL);
-  node->type = EXPR_FUNC_CALL;
-  node->expr.func_call.func = func;
-  node->expr.func_call.arg  = arg;
+  node->type = EXPR_FUN_CALL;
+  node->expr.fun_call.fun  = fun;
+  node->expr.fun_call.args = args;
+  return node;
 }
 
 ASTN_Expr astn_create_expr_token(Arena arena, ASTN_Token token) {
@@ -221,19 +234,18 @@ ASTN_Expr astn_create_expr_token(Arena arena, ASTN_Token token) {
   return node;
 }
 
-ASTN_ExprList astn_create_expr_list(Arena arena, ASTN_Expr arg, ASTN_Expr next) {
+ASTN_ExprList astn_create_expr_list(Arena arena, ASTN_Expr expr, ASTN_Expr next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, arg != NULL);
   ASTN_ExprList node = (ASTN_ExprList)arena_alloc(arena, sizeof(struct astn_expr_list));
   error_assert(error_mem, node != NULL);
-  node->arg  = arg;
+  node->expr = expr;
   node->next = next;
   return node;
 }
 
 ASTN_Token astn_create_token(Arena arena, ASTN_TokenType type, void* value, const char* file, uint32_t abs, uint32_t line, uint32_t rel) {
   error_assert(error_nullptr, arena != NULL);
-  error_assert(error_nullptr, value != NULL);
   ASTN_Token node = (ASTN_Token)arena_alloc(arena, sizeof(struct astn_token));
   error_assert(error_mem, node != NULL);
   node->type     = type;
@@ -244,6 +256,9 @@ ASTN_Token astn_create_token(Arena arena, ASTN_TokenType type, void* value, cons
   switch (type) {
     case TT_LIT_NUMBER: node->value.lit_number = *(int64_t*)value;
     case TT_LIT_REAL:   node->value.lit_real   = *(double*)value; 
+    case TT_LIT_TRUE:   node->value.lit_bool   = true;
+    case TT_LIT_FALSE:  node->value.lit_bool   = false;
+    case TT_LIT_NULL:   node->value.lit_null   = true;
     case TT_LIT_STRING: node->value.lit_str    = (const char*)value;
     case TT_IDENT:      node->value.ident      = (const char*)value;
     default:            error_panic(error_unexp, ERROR_INVALID_TT);
@@ -251,14 +266,14 @@ ASTN_Token astn_create_token(Arena arena, ASTN_TokenType type, void* value, cons
   return node;
 }
 
-ASTN_KType astn_create_ktype(Arena arena, bool is_default, ASTN_KTypeDefault default, ASTN_Token defined) {
+ASTN_KType astn_create_ktype(Arena arena, bool is_default, ASTN_KTypeDefault _default, ASTN_Token _defined) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_unexp, !is_default && defined == NULL); 
   ASTN_KType node = (ASTN_KType)arena_alloc(arena, sizeof(struct astn_ktype));
   error_assert(error_mem, node != NULL);
   node->is_default = is_default;
-  if (is_default) node->type.default = default;
-  else            node->type.defined = defined;
+  if (is_default) node->type._default = _default;
+  else            node->type._defined = _defined;
   return node;
 }
 

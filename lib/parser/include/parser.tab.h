@@ -1,8 +1,10 @@
 #ifndef YY_PARSER_TAB_H_INCLUDED
 #define YY_PARSER_TAB_H_INCLUDED
 
+#include "ast.h"
+
 #ifndef YYTOKENTYPE
-# define YYTOKENTYPE
+#define YYTOKENTYPE
   enum yytokentype {
     TT_IDENTIFIER = 258,
 
@@ -87,14 +89,39 @@
 ;
 #endif
 
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+/*
+#undef YYSTYPE
 typedef union YYSTYPE {
-    int num;
+  int         num;
+  double      real;
+  const char* str;
+  AST           program;
+  ASTN_Obj      obj;
+  ASTN_EnumVal  enum_values;
+  ASTN_FunArg   fun_args;
+  ASTN_FunRet   fun_ret;
+  ASTN_Stmt     stmt;
+  ASTN_Expr     expr;
+  ASTN_ExprList expr_list;
+  ASTN_Token    token;
+  ASTN_KType    ktype;
+  ASTN_KTypeDefault ktype_default;
 } YYSTYPE;
 # define YYSTYPE_IS_DECLARED 1
-#endif
 
+*/
 extern YYSTYPE yylval;
+
+#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
+typedef struct YYLTYPE {
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+} YYLTYPE;
+#define YYLTYPE_IS_DECLARED 1
+#endif
+extern YYLTYPE yylloc;
 
 int yyparse(void);
 
