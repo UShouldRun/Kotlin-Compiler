@@ -9,15 +9,10 @@
 // AST Types
 typedef enum {
   ASTN_TOKEN, ASTN_EXPR, ASTN_STMT,
-  ASTN_VAR, ASTN_fun, ASTN_ENUM,
+  ASTN_VAR, ASTN_FUN, ASTN_ENUM,
   ASTN_MAIN,
   ASTN_PROGRAM
 } ASTN_Type;
-
-// AST ENUMS
-typedef enum astn_object_type {
-  OBJ_fun, OBJ_ENUM
-} ASTN_ObjectType;
 
 typedef enum astn_stmt_type {
   STMT_WHILE, STMT_FOR, STMT_DO,
@@ -26,7 +21,7 @@ typedef enum astn_stmt_type {
   STMT_VAR_INCR_BEFORE, STMT_VAR_DECR_BEFORE,
   STMT_VAR_INCR_AFTER,  STMT_VAR_DECR_AFTER,
   STMT_VAR_EQUALS_PLUS, STMT_VAR_EQUALS_MINUS,
-  STMT_VAT_EQUALS_MUL,  STMT_VAR_EQUALS_DIV,
+  STMT_VAR_EQUALS_MUL,  STMT_VAR_EQUALS_DIV,
   STMT_VAR_DIRECT_ASSIGN, STMT_VAR_DECL, STMT_VAR_DECL_ASSIGN
 } ASTN_StmtType;
 
@@ -47,9 +42,11 @@ typedef enum astn_expr_op {
 } ASTN_ExprOp;
 
 typedef enum astn_ktype_default {
+  KOTLIN_NOT_DEFAULT = -1,
   KOTLIN_DECL = 0,
   KOTLIN_ANY,
   KOTLIN_BYTE, KOTLIN_SHORT, KOTLIN_INT, KOTLIN_LONG, 
+  KOTLIN_FLOAT, KOTLIN_DOUBLE,
   KOTLIN_CHAR, KOTLIN_STRING,
   KOTLIN_BOOLEAN
 } ASTN_KTypeDefault;
@@ -63,10 +60,8 @@ typedef struct astn_program   *AST;
 
 typedef struct astn_obj       *ASTN_Obj;
 
-typedef struct astn_enum      *ASTN_Enum;
 typedef struct astn_enum_val  *ASTN_EnumVal;
 
-typedef struct astn_fun       *ASTN_Fun;
 typedef struct astn_fun_arg   *ASTN_FunArg;
 typedef struct astn_fun_ret   *ASTN_FunRet;
 
@@ -77,12 +72,14 @@ typedef struct astn_expr_list *ASTN_ExprList;
 typedef struct astn_ktype     *ASTN_KType;
 typedef struct astn_token     *ASTN_Token;
 
-void       ast_print(AST program);
+// Functions
+
+void       ast_print(FILE* file, AST program);
 
 uint64_t   astn_max_size();
 
 // AST Node Creation
-AST           ast_create              (Arena, const char*, ASTN_Obj, ASTN_Obj);
+AST           ast_create              (Arena, const char*, ASTN_Obj);
 
 ASTN_Obj      astn_create_enum        (Arena, ASTN_Token, ASTN_EnumVal, ASTN_Obj); 
 ASTN_EnumVal  astn_create_enum_val    (Arena, ASTN_Token, ASTN_Token, bool, ASTN_EnumVal);
@@ -97,14 +94,14 @@ ASTN_Stmt     astn_create_stmt_if     (Arena, ASTN_StmtType, ASTN_Expr, ASTN_Stm
 ASTN_Stmt     astn_create_stmt_when   (Arena, ASTN_Expr, ASTN_Stmt, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_ret    (Arena, ASTN_ExprList);
 ASTN_Stmt     astn_create_stmt_fcall  (Arena, ASTN_Token, ASTN_ExprList, ASTN_Stmt);
-ASTN_Stmt     astn_create_stmt_assign (Arena, ASTN_Type, ASTN_Token, ASTN_KType, ASTN_Expr, ASTN_Stmt);
+ASTN_Stmt     astn_create_stmt_assign (Arena, ASTN_StmtType, ASTN_Token, ASTN_KType, ASTN_Expr, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_block  (Arena, ASTN_Stmt, ASTN_Stmt);
 
 ASTN_Expr     astn_create_expr_bin    (Arena, ASTN_ExprOp, ASTN_Expr, ASTN_Expr);
 ASTN_Expr     astn_create_expr_un     (Arena, ASTN_ExprOp, ASTN_Expr);
 ASTN_Expr     astn_create_expr_fcall  (Arena, ASTN_Token, ASTN_ExprList);
 ASTN_Expr     astn_create_expr_token  (Arena, ASTN_Token);
-ASTN_ExprList astn_create_expr_list   (Arena, ASTN_Expr, ASTN_Expr);
+ASTN_ExprList astn_create_expr_list   (Arena, ASTN_Expr, ASTN_ExprList);
 
 ASTN_Token    astn_create_token       (Arena, ASTN_TokenType, void*, const char*, uint32_t, uint32_t, uint32_t);
 ASTN_KType    astn_create_ktype       (Arena, bool, ASTN_KTypeDefault, ASTN_Token);

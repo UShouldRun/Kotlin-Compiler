@@ -1,15 +1,24 @@
 %{
 #include "arena.h"
 #include "parser.tab.h"
+extern int yylex(YYSTYPE* yylval, YYLTYPE* yylloc);
+#define YY_DECL extern int yylex (YYSTYPE* yylval, YYLTYPE* yylloc)
 /* string \"[^\"]*\" - may use this one*/
+/* "in"           { return TT_IN; } */
 %}
 
 %option caseless
+%option noinput nounput
+%option noyywrap
 
 alpha      [_a-zA-Z]
 digit      [0-9]
+hexa       ([0-9]|[a-f])
+HEXA       ([0-9]|[A-F])
+number_h   0(x{hexa}|X{HEXA})+
+number     {digit}+
+real       ({digit}+\.{digit}?|{digit}?\.{digit}+)(e((-)?{digit}+))?
 id         {alpha}({alpha}|{digit})*
-number     {digit}+(\.{digit}+)?
 string     \"([^\\"]|\\.)*\"
 whitespace [ \t\n\r]+
 comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
@@ -22,13 +31,11 @@ comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
 "when"         { return TT_WHEN; }
 "while"        { return TT_WHILE; }
 "for"          { return TT_FOR; }
-"in"           { return TT_IN; }
 "do"           { return TT_DO; }
 "return"       { return TT_RETURN; }
 "null"         { return TT_NULL; }
 "true"         { return TT_TRUE; }
 "false"        { return TT_FALSE; }
-"main"         { return TT_MAIN; }
 "Byte"         { return TT_BYTE; }
 "Short"        { return TT_SHORT; }
 "Int"          { return TT_INT; }
@@ -78,9 +85,11 @@ comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
 
 {whitespace}   ;
 {comment}      ;
-{id}           { yylval.str = strdup(yytext); return TT_IDENTIFIER; }
-{number}       { yylval.num = atoi(yytext);   return TT_NUMBER; }
-{string}       { yylval.str = strdup(yytext); return TT_STRING_LIT; }
+{id}           { yylval->str = strdup(yytext);           return TT_IDENTIFIER; }
+{number_h}     { yylval->num = strtol(yytext, NULL, 16); return TT_NUMBER; }
+{number}       { yylval->num = atoi(yytext);             return TT_NUMBER; }
+{real}         { yylval->real = strtod(yytext, NULL);    return TT_REAL; }
+{string}       { yylval->str = strdup(yytext);           return TT_STRING_LIT; }
 
 .              { /* Ignore any other character */ }
 

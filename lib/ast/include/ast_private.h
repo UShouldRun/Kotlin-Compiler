@@ -12,6 +12,19 @@
 #include "ast.h"
 #include "error.h"
 
+// Print the AST 
+void ast_print_obj       (FILE* file, ASTN_Obj obj, int indent);
+void ast_print_stmt      (FILE* file, ASTN_Stmt stmt, int indent);
+void ast_print_expr      (FILE* file, ASTN_Expr expr);
+void ast_print_fun_call  (FILE* file, ASTN_Token fun, ASTN_ExprList args);
+void ast_print_expr_list (FILE* file, ASTN_ExprList expr);
+void ast_print_ktype     (FILE* file, ASTN_KType node);
+void ast_print_token     (FILE* file, ASTN_Token token);
+void ast_print_indent    (FILE* file, int indent, const char* str);
+
+const char* ast_match_expr_op       (ASTN_ExprOp op);
+const char* ast_match_ktype_default (ASTN_KTypeDefault ktype);
+
 // AST KOTLIN TYPES
 struct astn_ktype {
   bool              is_default;
@@ -25,7 +38,7 @@ struct astn_ktype {
 struct astn_token {
   ASTN_TokenType type;
   union {
-    uint64_t    lit_number;
+    int64_t     lit_number;
     double      lit_real;
     bool        lit_bool;
     bool        lit_null;
@@ -38,7 +51,8 @@ struct astn_token {
 
 // AST EXPRESSIONS
 struct astn_expr_list {
-  ASTN_Expr expr, next;
+  ASTN_Expr     expr;
+  ASTN_ExprList next;
 };
 
 struct astn_expr {
@@ -101,21 +115,14 @@ struct astn_stmt {
 };
 
 struct astn_fun_arg {
-  ASTN_KType   type;
-  ASTN_Token   arg;
+  ASTN_KType  type;
+  ASTN_Token  arg;
   ASTN_FunArg next;
 };
 
 struct astn_fun_ret {
   ASTN_KType  type;
   ASTN_FunRet next;
-};
-
-struct astn_fun {
-  ASTN_Token  ident;
-  ASTN_FunArg args; 
-  ASTN_FunRet ret;
-  ASTN_Stmt   body;
 };
 
 // AST OBJECTS
@@ -126,16 +133,19 @@ struct astn_enum_val {
   ASTN_EnumVal next;
 };
 
-struct astn_enum {
-  ASTN_Token   ident;
-  ASTN_EnumVal values;
-};
-
 struct astn_obj {
   ASTN_Type type;
   union {
-    struct astn_fun _fun;
-    struct astn_enum _enum;
+    struct {
+      ASTN_Token  ident;
+      ASTN_FunArg args; 
+      ASTN_FunRet ret;
+      ASTN_Stmt   body;
+    } _fun;
+    struct {
+      ASTN_Token   ident;
+      ASTN_EnumVal values;
+    } _enum;
   } obj;
   ASTN_Obj next;
 };
@@ -144,15 +154,12 @@ struct astn_obj {
 struct astn_program {
   const char* name;
   ASTN_Obj    objects;
-  ASTN_Obj    main;
 };
 
 static uint64_t astn_sizes[] = {
   sizeof(struct astn_program),
   sizeof(struct astn_obj),
-  sizeof(struct astn_enum),
   sizeof(struct astn_enum_val),
-  sizeof(struct astn_fun),
   sizeof(struct astn_fun_ret),
   sizeof(struct astn_fun_arg),
   sizeof(struct astn_stmt),

@@ -14,7 +14,30 @@ static const char* _error_msg[ERROR_SIZE] = {
   "none"
 };
 
-static const char* _error_color[] = {
+void _error_print(ErrorType error, const char* msg, const char* file, uint32_t line, int32_t column) {
+  if (column == -1) {
+    fprintf(
+      stderr, "%s[FATAL]: %s, %s%s%s at %u, in %s%s\n",
+      colors[RED], _error_msg[error],
+      colors[UNDERLINE], msg, colors[RESET],
+      line, file, colors[RESET]
+    );
+    return;
+  }
+  fprintf(
+    stderr, "%s[FATAL]: %s, %s%s%s at %u-%d, in %s%s\n",
+    colors[RED], _error_msg[error],
+    colors[UNDERLINE], msg, colors[RESET],
+    line, column, file, colors[RESET]
+  );
+}
+
+void _error_assert(ErrorType error, const char* msg, const char* file, uint32_t line) {
+  _error_print(error, msg, file, line, -1);
+  exit(error);
+}
+
+const char* colors[] = {
   "\033[0m",  // Reset
   "\033[30m", // Black
   "\033[31m", // Red
@@ -45,41 +68,4 @@ static const char* _error_color[] = {
   "\033[47m", // Background White
 };
 
-#define RESET 0
-#define BLACK 1
-#define RED 2
-#define GREEN 3
-#define YELLOW 4
-#define BLUE 5
-#define MAGENTA 6
-#define CYAN 7
-#define WHITE 8
-#define BOLD 9
-#define UNDERLINE 10
-#define REVERSED 11
-#define BRIGHT_BLACK 12
-#define BRIGHT_RED 13
-#define BRIGHT_GREEN 14
-#define BRIGHT_YELLOW 15
-#define BRIGHT_BLUE 16
-#define BRIGHT_MAGENTA 17
-#define BRIGHT_CYAN 18
-#define BRIGHT_WHITE 19
-#define BG_BLACK 20
-#define BG_RED 21
-#define BG_GREEN 22
-#define BG_YELLOW 23
-#define BG_BLUE 24
-#define BG_MAGENTA 25
-#define BG_CYAN 26
-#define BG_WHITE 27
 
-void _error_assert(ErrorType error, const char* msg, const char* file, uint32_t line) {
-  fprintf(
-    stderr, "%s[FATAL]: %s, %s%s%s at %u, in %s%s\n",
-    _error_color[RED], _error_msg[error],
-    _error_color[UNDERLINE], msg, _error_color[RESET],
-    line, file, _error_color[RESET]
-  );
-  exit(error);
-}
