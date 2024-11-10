@@ -602,3 +602,5 @@ void yyerror(YYLTYPE* yylloc, AST* ast, const char* error_msg) {
   fprintf(stderr, "AST instance: %p", (void*)ast);
   _error_assert(error_parser, error_msg, filename, yylloc->first_line);
 }
+
+

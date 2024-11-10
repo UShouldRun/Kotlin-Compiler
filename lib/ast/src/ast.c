@@ -6,6 +6,155 @@ void ast_print(AST program) {
   fprintf(stdout, "%p\n", (void*)program);
 }
 
+
+//------------------------------------
+//Print the AST 
+
+void print_token(ASTN_Token token);
+void print_expr(ASTN_Expr expr, int indent);
+void print_stmt(ASTN_Stmt stmt, int indent);
+void print_obj(ASTN_Obj obj, int indent);
+void print_indent(int indent);
+
+// print tokens
+void print_token(ASTN_Token token) {
+    if (!token) return;
+    switch (token->type) {
+        case TT_IDENT:
+            printf("Identifier: %s", token->value.ident);
+            break;
+        case TT_LIT_NUMBER:
+            printf("Number Literal: %llu", token->value.lit_number);
+            break;
+        case TT_LIT_STRING:
+            printf("String Literal: %s", token->value.lit_str);
+            break;
+        default:
+            printf("Unknown token type\n");
+    }
+}
+
+//Print Expressions
+void print_expr(ASTN_Expr expr, int indent) {
+    if (!expr) return;
+    print_indent(indent);
+    switch (expr->type) {
+        case EXPR_BIN:
+            printf("Binary Expression\n");
+            print_expr(expr->expr.binary.left, indent + 1);
+            print_indent(indent + 1);
+            printf("Operator: %d\n", expr->expr.binary.op);
+            print_expr(expr->expr.binary.right, indent + 1);
+            break;
+        case EXPR_UN:
+            printf("Unary Expression\n");
+            print_indent(indent + 1);
+            printf("Operator: %d\n", expr->expr.unary.op);
+            print_expr(expr->expr.unary.operand, indent + 1);
+            break;
+        case EXPR_TOKEN:
+            printf("Token Expression\n");
+            print_token(expr->expr.token);
+            break;
+        default:
+            printf("Unknown expression type\n");
+    }
+}
+
+//Print Statements
+void print_stmt(ASTN_Stmt stmt, int indent) {
+    while (stmt) {
+        print_indent(indent);
+        switch (stmt->type) {
+            case STMT_WHILE:
+                printf("While Statement\n");
+                print_expr(stmt->stmt._while.cond, indent + 1);
+                print_stmt(stmt->stmt._while.block, indent + 1);
+                break;
+            case STMT_FOR:
+                printf("For Statement\n");
+                print_stmt(stmt->stmt._for.init, indent + 1);
+                print_expr(stmt->stmt._for.cond, indent + 1);
+                print_stmt(stmt->stmt._for.incr, indent + 1);
+                print_stmt(stmt->stmt._for.block, indent + 1);
+                break;
+            case STMT_RETURN:
+                printf("Return Statement\n");
+                ASTN_ExprList values = stmt->stmt._ret.value;
+                while (values) {
+                    print_expr(values->expr, indent + 1);
+                    values = values->next;
+                }
+                break;
+            default:
+                printf("Unknown statement type\n");
+        }
+        stmt = stmt->next;
+    }
+}
+
+//Print objects
+void print_obj(ASTN_Obj obj, int indent) {
+    print_indent(indent);
+    if (obj->type == OBJ_fun) {
+        printf("Function: ");
+        print_token(obj->obj._fun.ident);
+        printf("\n");
+
+        ASTN_FunArg arg = obj->obj._fun.args;
+        print_indent(indent + 1);
+        printf("Arguments:\n");
+        while (arg) {
+            print_indent(indent + 2);
+            printf("Argument type: %d, name: ", arg->type->type);
+            print_token(arg->arg);
+            printf("\n");
+            arg = arg->next;
+        }
+
+        print_indent(indent + 1);
+        printf("Function Body:\n");
+        print_stmt(obj->obj._fun.body, indent + 2);
+    } else if (obj->type == OBJ_ENUM) {
+        printf("Enum: ");
+        print_token(obj->obj._enum.ident);
+        printf("\n");
+
+        ASTN_EnumVal val = obj->obj._enum.values;
+        while (val) {
+            print_indent(indent + 1);
+            printf("Enum Value: ");
+            print_token(val->value);
+            printf("\n");
+            val = val->next;
+        }
+    }
+}
+
+//Print program
+void ast_print_program(AST program) {
+    printf("Program: %s\n", program->name);
+    printf("Main Function:\n");
+    if (program->main) {
+        print_obj(program->main, 1);
+    }
+
+    // Print other objects in the program
+    ASTN_Obj obj = program->objects;
+    while (obj) {
+        print_obj(obj, 1);
+        obj = obj->next;
+    }
+}
+
+void print_indent(int indent) {
+    for (int i = 0; i < indent; i++) {
+        printf("  ");
+    }
+}
+//----------------------------------------------
+
+
 uint64_t astn_max_size() {
   uint64_t max = astn_sizes[0];
   for (uint32_t i = 1; i < sizeof(astn_sizes)/sizeof(uint64_t); i++)
