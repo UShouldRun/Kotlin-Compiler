@@ -4,7 +4,7 @@
 
 // AST Type Check
 
-bool ast_type_check(FILE* file, AST program, uint64_t s_buckets, float load_threshold_factor) {
+bool ast_type_check(const char* file, AST program, uint64_t s_buckets, float load_threshold_factor) {
   error_assert(error_type_checker, file != NULL);
   error_assert(error_type_checker, program != NULL);
 
@@ -18,172 +18,16 @@ bool ast_type_check(FILE* file, AST program, uint64_t s_buckets, float load_thre
   for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
     if (node->type == ASTN_FUN)
       type_check = type_check && ast_type_check_obj(file, table, node);
+  for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
+    if (node->type == ASTN_FUN) {
+      Stack stack = stack_create();
+      for (ASTN_Stmt node_stmt = node->obj._fun.body; node_stmt != NULL; node_stmt = node_stmt->next)
+        type_check = type_check && ast_type_check_stmt(file, table, stack, node_stmt, node->obj._fun.ret);
+      error_assert(error_type_checker, stack_free(stack));
+    }
 
   error_assert(error_type_checker, hashtable_free(table));
   return type_check;
-}
-
-bool ast_type_check_obj(FILE* file, HashTable table, ASTN_Obj node) {
-  error_assert(error_type_checker, file != NULL);
-  error_assert(error_type_checker, node != NULL);
-
-  bool type_check = true;
-  switch (node->type) {
-    case ASTN_FUN: {
-      error_assert(error_type_checker, hashtable_insert_obj(table, node->obj._fun.ident, node));
-
-      for (ASTN_FunArg node_arg = node->obj._fun.args; node_arg != NULL; node_arg = node_arg->next) {
-        type_check = type_check && ast_type_check_ktype(file, table, node_arg->type);
-        error_assert(error_type_checker, hashtable_insert_var_ktype(table, node_arg->arg, node_arg->type));
-      }
-      for (ASTN_FunRet node_ret = node->obj._fun.ret; node_ret != NULL; node_ret = node_ret->next)
-        type_check = type_check && ast_type_check_ktype(file, table, node_ret->type);
-
-      for (ASTN_Stmt node_stmt = node->obj._fun.body; node_stmt != NULL; node_stmt = node_stmt->next)
-        type_check = type_check && ast_type_check_stmt(file, table, node_stmt, node->obj._fun.ret);
-
-      for (ASTN_FunArg node_arg = node->obj._fun.args; node_arg != NULL; node_arg = node_arg->next)
-        (void)hashtable_remove_var_ktype(table, node_arg->arg);
-
-      break;
-    }
-    case ASTN_ENUM: {
-      error_assert(error_type_checker, hashtable_insert_obj(table, node->obj._enum.ident, node));
-      int32_t i = 0;
-      for (ASTN_EnumVal node_value = node->obj._enum.values; node_value != NULL; node_value = node_value->next, i++) {
-        if (!node_value->is_atributed) {
-          node_value->atribute->type = TT_LIT_NUMBER;
-          node_value->atribute->value.lit_number = i;
-          node_value->is_atributed = true;
-        }
-        error_assert(error_type_checker, hashtable_insert_global(table, node_value->value, node_value->atribute))
-      }
-      break;
-    }
-    default: {
-      error_panic(error_parser, ERROR_INVALID_OBJ);
-    }
-  }
-
-  return type_check;
-}
-
-bool ast_type_check_stmt(FILE* file, HashTable table, ASTN_Stmt node, ASTN_FunRet ret) {
-  error_assert(error_type_checker, file != NULL); 
-  error_assert(error_type_checker, table != NULL);
-  error_assert(error_type_checker, node != NULL);
-  
-  bool type_check = true;
-  while (node != NULL) {
-    error_assert(error_type_checker, node != node->next);
-
-    switch (node->type) {
-      case STMT_WHILE: case STMT_DO: {
-        bool check_cond  = ast_type_check_expr(file, table, node->stmt._while.cond),
-             check_block = ast_type_check_stmt(file, table, node->stmt._while.block, ret);
-        type_check = type_check && check_cond && check_block;
-        break;
-      }
-      case STMT_FOR: {
-        bool check_init  = ast_type_check_stmt(file, table, node->stmt._for.init, NULL),
-             check_cond  = ast_type_check_expr(file, table, node->stmt._for.cond),
-             check_incr  = ast_type_check_stmt(file, table, node->stmt._for.incr, NULL),
-             check_block = ast_type_check_stmt(file, table, node->stmt._for.block, ret);
-        type_check = type_check && check_init && check_cond && check_incr && check_block;
-        break;
-      }
-      case STMT_IF: {
-        bool check_cond  = ast_type_check_expr(file, table, node->stmt._if.cond),
-             check_block = ast_type_check_stmt(file, table, node->stmt._if.block);
-        type_check = type_check && check_cond && check_block;
-        for (ASTN_Stmt node_stmt = node->stmt._if.next; node_stmt != NULL; node_stmt = node_stmt->stmt._if.next) {
-          error_assert(error_type_checker, node_stmt != node_stmt->stmt._if.next);
-          error_assert(error_type_checker, node_stmt->type == STMT_ELSEIF || node_stmt->type == STMT_ELSE);
-          check_cond  = (node->type == STMT_ELSE || ast_type_check_expr(file, table, node->stmt._if.cond));
-          check_block = ast_type_check_stmt(file, table, node->stmt._if.block, ret);
-          type_check  = type_check && check_cond && check_block;
-        } 
-        break;
-      }
-      case STMT_WHEN: {
-        bool check_cond  = ast_type_check_expr(file, table, node->stmt._when.cond),
-             check_cases = true;
-        type_check = type_check && check_cond;
-        for (ASTN_Stmt node_stmt = node->stmt._when.cases; node_stmt != NULL; node_stmt = node_stmt->stmt._if.next) {
-          error_assert(error_type_checker, node_stmt != node_stmt->stmt._if.next);
-          error_assert(error_type_checker, node_stmt->type == STMT_CASE || node_stmt->type == STMT_ELSE);
-          check_cond  = ast_type_check_expr(file, table, node_stmt->stmt._if.cond); 
-          check_cases = check_cases && ast_type_check_stmt(file, table, node_stmt->stmt._if.block);
-        }
-        break;
-      }
-      case STMT_BLOCK: {
-        break;
-      }
-      case STMT_FUN_CALL: {
-        break;
-      }
-      case STMT_RETURN: {
-        break;
-      }
-      case STMT_VAR_DECL: {
-        break;
-      }
-      case STMT_VAR_DIRECT_ASSIGN: {
-        break;
-      }
-      case STMT_VAR_DECL_ASSIGN: {
-        break;
-      }
-      case STMT_VAR_INCR_BEFORE: {
-        break;
-      }
-      case STMT_VAR_DECR_BEFORE: {
-        break;
-      }
-      case STMT_VAR_INCR_AFTER: {
-        break;
-      }
-      case STMT_VAR_DECR_AFTER: {
-        break;
-      }
-      case STMT_VAR_EQUALS_PLUS: {
-        break;
-      }
-      case STMT_VAR_EQUALS_MINUS: {
-        break;
-      }
-      case STMT_VAR_EQUALS_MUL: {
-        break;
-      }
-      case STMT_VAR_EQUALS_DIV: {
-        break;
-      }
-      case STMT_ELSEIF: case STMT_ELSE: {
-        ast_error(file, ERROR_SYNTAX_ELSEIF_ELSE);
-        break;
-      }
-      case STMT_CASE: {
-        ast_error(file, ERROR_SYNTAX_CASE);
-        break;
-      }
-      default: {
-        error_panic(error_type_checker, ERROR_INVALID_STMT);
-        break;
-      }
-    }
-
-    node = node->next;
-  }
-
-  return type_check;
-}
-
-bool ast_type_check_ktype(FILE* file, HashTable table, ASTN_KType ktype) {
-  error_assert(error_type_checker, file != NULL); 
-  error_assert(error_type_checker, table != NULL);
-  error_assert(error_type_checker, ktype != NULL);
-  return ktype->is_default || hashtable_lookup_global(table, ktype->type._defined) != NULL;
 }
 
 // AST Print 
@@ -469,36 +313,224 @@ ASTN_KType astn_create_ktype(Arena arena, bool is_default, ASTN_KTypeDefault _de
 
 // =======================================# PRIVATE #==========================================
 
-// Print AST Objects
-void ast_print_obj(FILE* file, ASTN_Obj node, int indent) {
+// AST Type Check
+bool ast_type_check_obj(const char* file, HashTable table, ASTN_Obj node) {
+  error_assert(error_type_checker, file != NULL);
+  error_assert(error_type_checker, node != NULL);
+
+  bool type_check = true;
+  switch (node->type) {
+    case ASTN_FUN: {
+      error_assert(error_type_checker, hashtable_insert_obj(table, node->obj._fun.ident, node));
+      for (ASTN_FunArg node_arg = node->obj._fun.args; node_arg != NULL; node_arg = node_arg->next) {
+        type_check = type_check && ast_type_check_ktype(file, table, node_arg->type);
+        error_assert(error_type_checker, hashtable_insert_var_ktype(table, node_arg->arg, node_arg->type));
+      }
+      for (ASTN_FunRet node_ret = node->obj._fun.ret; node_ret != NULL; node_ret = node_ret->next)
+        type_check = type_check && ast_type_check_ktype(file, table, node_ret->type);
+      break;
+    }
+    case ASTN_ENUM: {
+      error_assert(error_type_checker, hashtable_insert_obj(table, node->obj._enum.ident, node));
+      int32_t i = 0;
+      for (ASTN_EnumVal node_value = node->obj._enum.values; node_value != NULL; node_value = node_value->next, i++) {
+        if (!node_value->is_atributed) {
+          node_value->atribute->type = TT_LIT_NUMBER;
+          node_value->atribute->value.lit_number = i;
+          node_value->is_atributed = true;
+        }
+        error_assert(error_type_checker, hashtable_insert_global(table, node_value->value, node_value->atribute))
+      }
+      break;
+    }
+    default: {
+      error_panic(error_parser, ERROR_INVALID_OBJ);
+    }
+  }
+
+  return type_check;
+}
+
+bool ast_type_check_stmt(const char* file, HashTable table, Stack stack, ASTN_Stmt node, ASTN_FunRet ret) {
+  error_assert(error_type_checker, file != NULL); 
+  error_assert(error_type_checker, table != NULL);
+  error_assert(error_type_checker, stack != NULL);
+  error_assert(error_type_checker, node != NULL);
+  
+  bool type_check = true;
+  while (node != NULL) {
+    error_assert(error_type_checker, node != node->next);
+
+    switch (node->type) {
+      case STMT_WHILE: case STMT_DO: {
+        stack_push_frame(&stack);
+        bool check_cond  = ast_type_check_expr(file, table, node->stmt._while.cond),
+             check_block = ast_type_check_stmt(file, table, stack, node->stmt._while.block, ret);
+        type_check = type_check && check_cond && check_block;
+        stack_pop_frame(&stack);
+        break;
+      }
+      case STMT_FOR: {
+        stack_push_frame(&stack);
+        bool check_init  = ast_type_check_stmt(file, table, stack, node->stmt._for.init, NULL),
+             check_cond  = ast_type_check_expr(file, table, stack, node->stmt._for.cond),
+             check_incr  = ast_type_check_stmt(file, table, stack, node->stmt._for.incr, NULL),
+             check_block = ast_type_check_stmt(file, table, stack, node->stmt._for.block, ret);
+        type_check = type_check && check_init && check_cond && check_incr && check_block;
+        stack_pop_frame(&stack);
+        break;
+      }
+      case STMT_IF: {
+        stack_push_frame(&stack);
+        bool check_cond  = ast_type_check_expr(file, table, stack, node->stmt._if.cond),
+             check_block = ast_type_check_stmt(file, table, stack, node->stmt._if.block, ret);
+        type_check = type_check && check_cond && check_block;
+        stack_pop_frame(&stack);
+        for (ASTN_Stmt node_stmt = node->stmt._if.next; node_stmt != NULL; node_stmt = node_stmt->stmt._if.next) {
+          stack_push_frame(&stack);
+          error_assert(error_type_checker, node_stmt != node_stmt->stmt._if.next);
+          error_assert(error_type_checker, node_stmt->type == STMT_ELSEIF || node_stmt->type == STMT_ELSE);
+          check_cond  = (node->type == STMT_ELSE || ast_type_check_expr(file, table, node->stmt._if.cond));
+          check_block = ast_type_check_stmt(file, table, stack, node->stmt._if.block, ret);
+          type_check  = type_check && check_cond && check_block;
+          stack_pop_frame(&stack);
+        }
+        break;
+      }
+      case STMT_WHEN: {
+        bool check_cond  = ast_type_check_expr(file, table, node->stmt._when.cond),
+             check_cases = true;
+        type_check = type_check && check_cond;
+        for (ASTN_Stmt node_stmt = node->stmt._when.cases; node_stmt != NULL; node_stmt = node_stmt->stmt._if.next) {
+          error_assert(error_type_checker, node_stmt != node_stmt->stmt._if.next);
+          error_assert(error_type_checker, node_stmt->type == STMT_CASE || node_stmt->type == STMT_ELSE);
+          check_cond  = ast_type_check_expr(file, table, node_stmt->stmt._if.cond); 
+          stack_push_frame(&stack);
+          check_cases = check_cases && ast_type_check_stmt(file, table, stack, node_stmt->stmt._if.block, ret);
+          stack_pop_frame(&stack);
+        }
+        break;
+      }
+      case STMT_BLOCK: {
+        stack_push_frame(&stack);
+        type_check = type_check && ast_type_check_stmt(file, table, stack, node->stmt.block, ret);
+        stack_pop_frame(&stack);
+        break;
+      }
+      case STMT_FUN_CALL: {
+        ASTN_Obj node_fun = hashtable_lookup_obj(hashtable, node->fun.value.ident);
+        if (node_fun == NULL) {
+          ast_error(ERROR_UNDEFINED_FUN, file, ast_get_pos_line((void*)node, ASTN_STMT), ast_get_pos_rel((void*)node, ASTN_STMT));
+        } else {
+          ASTN_ExprList fc_arg = node->stmt._fun_call.fun.args;
+          ASTN_FunArg   f_arg  = node_fun->obj._fun.args;  
+          while (f_arg != NULL && fc_arg != NULL) {
+            ASTN_KType expr_type = ast_type_check_expr(file, table, fc_arg->expr);
+            if (!ast_type_check_ktype_same(f_arg->type, expr_type)) {
+              ast_error(ERROR_TYPE_CONFLICT, file, ast_get_pos_line((void*)node, ASTN_TOKEN), ast_get_pos_rel((void*)node, ASTN_TOKEN));
+              ast_print_fun_decl(stderr, node_fun);
+            }
+            f_arg  = f_arg->next;
+            fc_arg = fc_arg->next;
+          }
+          if (f_arg != NULL && fc_arg == NULL) {
+            ast_error(ERROR_TYPE_FEW_ARGS, file, ast_get_pos_line((void*)node, ASTN_TOKEN), ast_get_pos_rel((void*)node, ASTN_TOKEN));
+            ast_print_fun_decl(stderr, node_fun);
+          } else if (f_arg == NULL && fc_arg != NULL) {
+            ast_error(ERROR_TYPE_MANY_ARGS, file, ast_get_pos_line((void*)node, ASTN_TOKEN), ast_get_pos_rel((void*)node, ASTN_TOKEN));
+            ast_print_fun_decl(stderr, node_fun);
+          }
+        }
+        break;
+      }
+      case STMT_RETURN: {
+        break;
+      }
+      case STMT_VAR_DECL: {
+        break;
+      }
+      case STMT_VAR_DIRECT_ASSIGN: {
+        break;
+      }
+      case STMT_VAR_DECL_ASSIGN: {
+        break;
+      }
+      case STMT_VAR_INCR_BEFORE: {
+        break;
+      }
+      case STMT_VAR_DECR_BEFORE: {
+        break;
+      }
+      case STMT_VAR_INCR_AFTER: {
+        break;
+      }
+      case STMT_VAR_DECR_AFTER: {
+        break;
+      }
+      case STMT_VAR_EQUALS_PLUS: {
+        break;
+      }
+      case STMT_VAR_EQUALS_MINUS: {
+        break;
+      }
+      case STMT_VAR_EQUALS_MUL: {
+        break;
+      }
+      case STMT_VAR_EQUALS_DIV: {
+        break;
+      }
+      case STMT_ELSEIF: case STMT_ELSE: {
+        ast_error(ERROR_SYNTAX_ELSEIF_ELSE, file, ast_get_pos_line((void*)node, ASTN_STMT), ast_get_pos_rel((void*)node, ASTN_STMT));
+        break;
+      }
+      case STMT_CASE: {
+        ast_error(ERROR_SYNTAX_CASE, file, ast_get_pos_line((void*)node, ASTN_STMT), ast_get_pos_rel((void*)node, ASTN_STMT));
+        break;
+      }
+      default: {
+        error_panic(error_type_checker, ERROR_INVALID_STMT);
+        break;
+      }
+    }
+
+    node = node->next;
+  }
+
+  return type_check;
+}
+
+ASTN_KType ast_type_check_expr(const char* file, HashTable table, ASTN_Expr) {
+
+}
+
+bool ast_type_check_ktype_same(ASTN_KType a, ASTN_KType b) {
+
+}
+
+bool ast_type_check_ktype(const char* file, HashTable table, ASTN_KType ktype) {
+  error_assert(error_type_checker, file != NULL); 
+  error_assert(error_type_checker, table != NULL);
+  error_assert(error_type_checker, ktype != NULL);
+  return ktype->is_default || hashtable_lookup_global(table, ktype->type._defined) != NULL;
+}
+
+uint32_t ast_get_pos_line(void* node, ASTN_Type type) {
+
+}
+
+uint32_t ast_get_pos_rel(void* node, ASTN_Type type) {
+
+}
+
+// AST Print
+void ast_print_obj(FILE* file, ASTN_Obj node, int32_t indent) {
   error_assert(error_nullptr, file != NULL);
   error_assert(error_nullptr, node != NULL);
 
   ast_print_indent(file, indent, "");
   if (node->type == ASTN_FUN) {
-    fprintf(file, "fun ");
-    ast_print_token(file, node->obj._fun.ident);
-
-    fprintf(file, "(");
-    ASTN_FunArg node_arg = node->obj._fun.args;
-    while (node_arg) {
-      ast_print_token(file, node_arg->arg);
-      fprintf(file, " ktype: ");
-      ast_print_ktype(file, node_arg->type);
-      node_arg = node_arg->next;
-      fprintf(file, "%s", node_arg ? ", " : "");
-    }
-
-    fprintf(file, ") Ret(");
-    ASTN_FunRet node_ret = node->obj._fun.ret;
-    while (node_ret) {
-      fprintf(file, "ktype: ");
-      ast_print_ktype(file, node_ret->type);
-      node_ret = node_ret->next;
-      fprintf(file, "%s", node_ret ? ", " : "");
-    }
-
-    fprintf(file, ") Body { \n");
+    ast_print_fun_decl(file, node);
+    ast_print_indent(file, indent, "{\n");
     ast_print_stmt(file, node->obj._fun.body, indent + 1);
     ast_print_indent(file, indent, "}\n");
   } else if (node->type == ASTN_ENUM) {
@@ -521,8 +553,37 @@ void ast_print_obj(FILE* file, ASTN_Obj node, int indent) {
   }
 }
 
+void ast_print_fun_decl(FILE* file, ASTN_Obj node) {
+  error_assert(error_nullptr, file != NULL);
+  error_assert(error_nullptr, node != NULL);
+
+  fprintf(file, "fun ");
+  ast_print_token(file, node->obj._fun.ident);
+
+  fprintf(file, "(");
+  ASTN_FunArg node_arg = node->obj._fun.args;
+  while (node_arg) {
+    ast_print_token(file, node_arg->arg);
+    fprintf(file, " ktype: ");
+    ast_print_ktype(file, node_arg->type);
+    node_arg = node_arg->next;
+    fprintf(file, "%s", node_arg ? ", " : "");
+  }
+
+  fprintf(file, ") Ret(");
+  ASTN_FunRet node_ret = node->obj._fun.ret;
+  while (node_ret) {
+    fprintf(file, "ktype: ");
+    ast_print_ktype(file, node_ret->type);
+    node_ret = node_ret->next;
+    fprintf(file, "%s", node_ret ? ", " : "");
+  }
+
+  fprintf(file, ")\n");
+}
+
 // Print AST Statements
-void ast_print_stmt(FILE* file, ASTN_Stmt node, int indent) {
+void ast_print_stmt(FILE* file, ASTN_Stmt node, int32_t indent) {
   error_assert(error_nullptr, file != NULL);
   error_assert(error_nullptr, node != NULL);
 
@@ -813,7 +874,7 @@ void ast_print_token(FILE* file, ASTN_Token token) {
   fprintf(file, "%s", colors[RESET]);
 }
 
-void ast_print_indent(FILE* file, int indent, const char* str) {
+void ast_print_indent(FILE* file, int32_t indent, const char* str) {
   error_assert(error_nullptr, file != NULL);
   fprintf(file, "%*c%s", 2 * indent, ' ', str);
 }
@@ -888,10 +949,8 @@ const char* ast_match_ktype_default(ASTN_KTypeDefault ktype) {
   return NULL;
 }
 
-void ast_error(ASTN_Token token, const char* error_msg) {
-  error_assert(error_unexp, token != NULL);
-
-  _error_print(error_parser, error_msg, filename, token->pos_line, token->pos_rel);
+void ast_error(const char* error_msg, const char* filename, uint32_t pos_line, uint32_t pos_rel) {
+  _error_print(error_parser, error_msg, filename, pos_line, pos_rel);
   FILE* file = fopen(filename, "r");
   if (file == NULL) {
     fprintf(stderr, ERROR_IO_SOURCE_FILE, filename);
@@ -900,13 +959,12 @@ void ast_error(ASTN_Token token, const char* error_msg) {
   char line[1024];
   for (
     int current_line = 1;
-    fgets(line, sizeof(line), file) && current_line != token->pos_line;
+    fgets(line, sizeof(line), file) && current_line != pos_line;
     current_line++
   );
   fclose(file);
-
   fprintf(stderr, "%s", line);
-  for (int i = 1; i < token->pos_rel; i++)
+  for (int i = 1; i < pos_rel; i++)
     fprintf(stderr, " ");
   fprintf(stderr, "^\n");
 }

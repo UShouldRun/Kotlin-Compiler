@@ -7,6 +7,7 @@
 // ==================================================# PUBLIC #=================================================================
 
 typedef HashMap HashTable;
+typedef struct stack_table *Stack;
 
 HashTable  hashtable_create           (uint64_t s_buckets, float load_threshold_factor);
 
@@ -27,5 +28,14 @@ bool       hashtable_insert_global    (HashTable* table, ASTN_Token token, ASTN_
 
 bool       hashtable_exists_token     (HashTable table, ASTN_Token token);
 bool       hashtable_free             (HashTable table);
+
+Stack      stack_create               ();
+uint64_t   stack_size                 (Stack stack);
+ASTN_Token stack_pop                  (Stack* stack);
+bool       stack_pop_frame            (Stack* stack);
+bool       stack_push                 (Stack* stack, ASTN_Token token);
+bool       stack_push_frame           (Stack* stack);
+bool       stack_is_frame             (Stack stack);
+bool       stack_free                 (Stack stack);
 
 #endif // !HASH_TABLE_H

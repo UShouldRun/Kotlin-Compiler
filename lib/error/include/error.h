@@ -65,6 +65,12 @@ typedef enum {
 #define ERROR_INVALID_OBJ         "Invalid Object"
 #define ERROR_INVALID_KTYPE       "Invalid KType Default"
 
+#define ERROR_UNDEFINED_FUN       "Undefined function"
+
+#define ERROR_TYPE_CONFLICT       "Type conflict"
+#define ERROR_TYPE_FEW_ARGS       "Few arguments passed into function"
+#define ERROR_TYPE_MANY_ARGS      "Many arguments passed into function"
+
 #define ERROR_IO_SOURCE_FILE      "[ERROR]: Could not open file %s for error display.\n"
 
 // ======================================# PRIVATE #==========================================

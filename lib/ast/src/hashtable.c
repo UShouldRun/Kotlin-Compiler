@@ -72,7 +72,7 @@ bool hashtable_insert_var_ktype(HashTable* table, ASTN_Token token, ASTN_KType k
   if (!token) return false;
   if (!ktype) return false;
   HT_Value value = (HT_Value)malloc(sizeof(struct hashtable_value));
-  error_assert(error_type_checker, value != NULL);
+  error_assert(error_mem, value != NULL);
   value->type = ASTN_TOKEN;
   value->node = (void*)ktype;
   return hashmap_insert(table, token->value.ident, (void*)value, NULL);
@@ -83,7 +83,7 @@ bool hashtable_insert_obj(HashTable* table, ASTN_Token token, ASTN_Obj obj) {
   if (!token) return false;
   if (!ktype) return false;
   HT_Value value = (HT_Value)malloc(sizeof(struct hashtable_value));
-  error_assert(error_type_checker, value != NULL);
+  error_assert(error_mem, value != NULL);
   value->type = ASTN_OBJ;
   value->node = (void*)obj;
   return hashmap_insert(table, token->value.ident, (void*)value, NULL);
@@ -94,7 +94,7 @@ bool hashtable_insert_global(HashTable* table, ASTN_Token token, ASTN_Token glob
   if (!token) return false;
   if (!ktype) return false;
   HT_Value value = (HT_Value)malloc(sizeof(struct hashtable_value));
-  error_assert(error_type_checker, value != NULL);
+  error_assert(error_mem, value != NULL);
   value->type = ASTN_VAR;
   value->node = (void*)global;
   return hashmap_insert(table, token->value.ident, (void*)value, NULL);
@@ -107,6 +107,71 @@ bool hashtable_exists_token(HashTable table, ASTN_Token token) {
 bool hashtable_free(HashTable table) {
   if (!table) return false;
   return hashmap_free(table);
+}
+
+Stack stack_create() {
+  Stack root = (Stack)malloc(sizeof(struct stack_table));
+  error_assert(error_mem, root != NULL);
+  root->frame = true;
+  root->token = NULL;
+  root->next  = NULL;
+  return root;
+}
+
+uint64_t stack_size(Stack stack) {
+  uint64_t s_stack = 0;
+  for (Stack node = stack; node != NULL; node = node->next)
+    if (!node->frame)
+      s_stack++;
+  return s_stack;
+}
+
+bool stack_push(Stack* stack, ASTN_Token token) {
+  if (stack == NULL)
+    return false;
+  Stack top = (Stack)malloc(sizeof(struct stack_table));
+  error_assert(error_mem, top != NULL);
+  top->next  = *stack;
+  top->frame = token == NULL;
+  top->token = token;
+  *stack = top;
+}
+
+bool stack_push_frame(Stack* stack) {
+  return stack_push(stack, NULL);
+}
+
+ASTN_Token stack_pop(Stack* stack) {
+  if (stack == NULL)
+    return NULL;
+  Stack top = *stack;
+  ASTN_Token token = top->token;
+  *stack = top->next;
+  free(top);
+  return token;
+}
+
+bool stack_pop_frame(Stack* stack, HashTable table) {
+  if (stack == NULL)
+    return false;
+  while (!(*stack)->frame)
+    (void)hashtable_remove_var_ktype(table, stack_pop(stack));
+}
+
+bool stack_is_frame(Stack stack) {
+  return stack ? stack->frame : false;
+}
+
+bool stack_free(Stack stack) {
+  if (stack == NULL)
+    return false;
+  Stack node = stack;
+  while (node != NULL) {
+    Stack delete = node;
+    node = node->next;
+    free(delete);
+  }
+  return true;
 }
 
 // ==================================================# PRIVATE #==========================================================
