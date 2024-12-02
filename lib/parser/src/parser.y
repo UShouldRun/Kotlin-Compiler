@@ -565,29 +565,24 @@ kotlin_expression_list:
 %%
 
 void yyerror(YYLTYPE* yylloc, const char* error_msg) {
+  error_assert(error_unexp, yylloc != NULL);
+
   _error_print(error_parser, error_msg, filename, yylloc->first_line, yylloc->first_column);
-
-  // Open the file to read the line where the error occurred
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        fprintf(stderr, "[ERROR]: Could not open file %s for error display.\n", filename);
-        return;
-    }
-
-    // Move to the line of the error
-    char line[1024];
+  FILE* file = fopen(filename, "r");
+  if (file == NULL) {
+    fprintf(stderr, ERROR_IO_SOURCE_FILE, filename);
+    return;
+  }
+  char line[1024];
+  for (
     int current_line = 1;
-    while (fgets(line, sizeof(line), file)) {
-        if (current_line == yylloc->first_line) {
-            break;
-        }
-        current_line++;
-    }
-    fclose(file);
+    fgets(line, sizeof(line), file) && current_line != yylloc->first_line;
+    current_line++
+  );
+  fclose(file);
 
-    fprintf(stderr, "%s", line);
-    for (int i = 1; i < yylloc->first_column; i++) {
-        fprintf(stderr, " ");
-    }
-    fprintf(stderr, "^\n");
+  fprintf(stderr, "%s", line);
+  for (int i = 1; i < yylloc->first_column; i++)
+    fprintf(stderr, " ");
+  fprintf(stderr, "^\n");
 }

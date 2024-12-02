@@ -11,6 +11,7 @@ static const char* _error_msg[ERROR_SIZE] = {
   "Unexpected",
   "IO Error",
   "Parser Error",
+  "Type Check Error",
   "none"
 };
 

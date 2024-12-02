@@ -50,6 +50,7 @@ typedef enum {
   error_unexp,
   error_io,
   error_parser,
+  error_type_checker,
   error_end
 } ErrorType;
 
@@ -57,13 +58,14 @@ typedef enum {
 #define ERROR_SYNTAX_ELSEIF_ELSE  "<else if> or <else> block with no parent <if>"
 #define ERROR_SYNTAX_CASE         "<case> block with no parent <when>"
 
-#define ERROR_INVALID_EXPR_OP "Invalid Expr Op"
-#define ERROR_INVALID_TT      "Invalid Token Type"
-#define ERROR_INVALID_EXPR    "Invalid Expression"
-#define ERROR_INVALID_STMT    "Invalid Statement"
-#define ERROR_INVALID_OBJ     "Invalid Object"
+#define ERROR_INVALID_EXPR_OP     "Invalid Expr Op"
+#define ERROR_INVALID_TT          "Invalid Token Type"
+#define ERROR_INVALID_EXPR        "Invalid Expression"
+#define ERROR_INVALID_STMT        "Invalid Statement"
+#define ERROR_INVALID_OBJ         "Invalid Object"
+#define ERROR_INVALID_KTYPE       "Invalid KType Default"
 
-#define ERROR_INVALID_KTYPE   "Invalid KType Default"
+#define ERROR_IO_SOURCE_FILE      "[ERROR]: Could not open file %s for error display.\n"
 
 // ======================================# PRIVATE #==========================================
 

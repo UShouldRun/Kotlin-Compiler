@@ -73,10 +73,9 @@ typedef struct astn_ktype     *ASTN_KType;
 typedef struct astn_token     *ASTN_Token;
 
 // Functions
-
-void       ast_print(FILE* file, AST program);
-
-uint64_t   astn_max_size();
+bool          ast_type_check          (FILE*, AST, uint64_t, float);
+void          ast_print               (FILE*, AST);
+uint64_t      astn_max_size           ();
 
 // AST Node Creation
 AST           ast_create              (Arena, const char*, ASTN_Obj);

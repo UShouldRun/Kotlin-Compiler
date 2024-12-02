@@ -1,5 +1,8 @@
 # Kotlin Parser Project - TP1
 
+## Requirements
+To run this project make sure your system has `make`, `flex` and `bison` installed.
+
 ## Compilation
 To compile the project, use the following commands:
 ```bash
@@ -52,6 +55,6 @@ This project implements a parser that reads a subset of Kotlin code and generate
 
 ## Authors
 - Henrique Teixeira, Student ID: 202306640
-- Rafael Silva, Student ID: (to be added)
+- Rafael Silva, Student ID: 202108429
 
 **Group:** T01_G13roup: T01_G13

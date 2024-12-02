@@ -10,6 +10,7 @@ LIBDIR  	 = ./lib
 ARENA_DIR  = $(LIBDIR)/arena
 AST_DIR 	 = $(LIBDIR)/ast
 ERROR_DIR  = $(LIBDIR)/error
+HASH_DIR   = $(LIBDIR)/hashmap
 LEXER_DIR  = $(LIBDIR)/lexer
 PARSER_DIR = $(LIBDIR)/parser
 TEST_DIR 	 = test
@@ -19,6 +20,7 @@ ZIP 			 = COMP_TP1_T01_G13.zip
 ARENA_INC  = $(ARENA_DIR)/include
 AST_INC 	 = $(AST_DIR)/include
 ERROR_INC  = $(ERROR_DIR)/include
+HASH_INC 	 = $(HASH_DIR)/include
 PARSER_INC = $(PARSER_DIR)/build/
 
 # Source files
@@ -26,6 +28,8 @@ SRC 			 = $(wildcard ./src/*.c)
 ARENA_SRC  = $(ARENA_DIR)/src/arena.c
 AST_SRC 	 = $(AST_DIR)/src/ast.c
 ERROR_SRC  = $(ERROR_DIR)/src/error.c
+HASH_SRC   = $(HASH_DIR)/src/hashmap.c
+HASHT_SRC  = $(AST_DIR)/src/hashtable.c
 LEXER_SRC  = $(LEXER_DIR)/src/lexer.x
 PARSER_SRC = $(PARSER_DIR)/src/parser.y
 
@@ -33,6 +37,8 @@ PARSER_SRC = $(PARSER_DIR)/src/parser.y
 ARENA_OBJ  = $(ARENA_DIR)/build/arena.o
 AST_OBJ    = $(AST_DIR)/build/ast.o
 ERROR_OBJ  = $(ERROR_DIR)/build/error.o
+HASH_OBJ   = $(HASH_DIR)/build/hashmap.o
+HASHT_OBJ  = $(AST_DIR)/build/hashtable.o
 LEXER_OBJ  = $(LEXER_DIR)/build/lexer.yy.c
 PARSER_OBJ = $(PARSER_DIR)/build/parser.o
 
@@ -42,11 +48,12 @@ OBJ 			 = $(patsubst ./src/%.c, $(BUILDDIR)/%.o, $(SRC))
 ARENA_LIB  = $(ARENA_DIR)/build
 AST_LIB 	 = $(AST_DIR)/build
 ERROR_LIB  = $(ERROR_DIR)/build
+HASH_LIB   = $(HASH_DIR)/build
 
 # Dependencies
-AST_DEP  	 = -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -larena -L$(ARENA_LIB) -lerror -L$(ERROR_LIB)
+AST_DEP  	 = -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -I$(HASH_INC) -lhashtable -L$(AST_LIB) -larena -L$(ARENA_LIB) -lerror -L$(ERROR_LIB) -lhashmap -L$(HASH_LIB)
 LEXER_DEP  = -I$(PARSER_DIR)/build/parser.tab.h
-PARSER_DEP = -I$(PARSER_INC) -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -last -L$(AST_LIB) -larena -L$(ARENA_LIB) -lerror -L$(ERROR_LIB)
+PARSER_DEP = -I$(PARSER_INC) -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -lhashtable -L$(AST_LIB) -last -L$(AST_LIB) -larena -L$(ARENA_LIB) -lerror -L$(ERROR_LIB) -lhashmap -L$(HASH_LIB)
 
 # Executable
 TARGET 	 = kotlin
@@ -74,7 +81,7 @@ $(ZIP):
 	@echo "Zipped the directory to $@"
 
 # Rule to build the final binary executable
-$(TARGET): $(SRC) | lexer parser ast arena error
+$(TARGET): $(SRC) | lexer parser ast hashtable hashmap arena error
 	@$(CC) -Wall -o $(BINDIR)/$(TARGET) $< $(DEP)
 	@echo "Built the target binary $(BINDIR)/$(TARGET)"
 
@@ -97,6 +104,16 @@ $(ERROR_DIR)/build/liberror.a: $(ERROR_SRC)
 	@$(CC) $(CFLAGS) $(DEBUG) -o $(ERROR_OBJ) -c $< -I$(ERROR_INC)
 	@$(LIB_CREATE) $@ $(ERROR_OBJ)
 	@echo "Compiled Error"
+
+$(HASH_DIR)/build/libhashmap.o: $(HASH_SRC)
+	@$(CC) $(CFLAGS) $(DEBUG) -o $(HASH_OBJ) -c $< -I$(HASH_INC)
+	@$(LIB_CREATE) $@ $(HASH_OBJ)
+	@echo "Compiled HashMap"
+
+$(AST_DIR)/build/libhashtable.o: $(HASHT_SRC)
+	@$(CC) $(CFLAGS) $(DEBUG) -o $(HASHT_OBJ) -c $< -I$(AST_INC)
+	@$(LIB_CREATE) $@ $(HASHT_OBJ)
+	@echo "Compiled HashTable"
 
 # Rule to compile lexer
 $(LEXER_DIR)/build/lexer.yy.c: $(LEXER_SRC) | $(LEXER_DIR)/build
@@ -134,7 +151,7 @@ $(DIRS):
 
 # Clean rule
 clean:
-	@rm -f $(BUILDDIR)/*.o $(ARENA_DIR)/build/* $(AST_DIR)/build/* $(ERROR_DIR)/build/* $(LEXER_DIR)/build/*.c $(PARSER_DIR)/build/* $(TARGET)
+	@rm -f $(BUILDDIR)/*.o $(ARENA_DIR)/build/* $(AST_DIR)/build/* $(ERROR_DIR)/build/* $(HASH_DIR)/build/* $(LEXER_DIR)/build/*.c $(PARSER_DIR)/build/* $(TARGET)
 	@rm *.zip
 	@echo "Cleaned all build directories and zip files"
 
@@ -148,6 +165,8 @@ arena:  		$(ARENA_DIR)/build/libarena.a
 ast:	  		$(AST_DIR)/build/libast.a
 error:  		$(ERROR_DIR)/build/liberror.a
 lexer:  		$(LEXER_DIR)/build/lexer.yy.c
+hashmap:    $(HASH_DIR)/build/libhashmap.o
+hashtable:  $(AST_DIR)/build/libhashtable.o
 parser: 		$(PARSER_DIR)/build/parser.o
 parser_tab: $(PARSER_DIR)/build/parser.tab.c
 tarena: 		$(TEST_DIR)/arena/tarena

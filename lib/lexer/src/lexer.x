@@ -27,7 +27,7 @@ comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
 
 "if"           { return TT_IF; }
 "else"         { return TT_ELSE; }
-"elseif"       { return TT_ELSEIF; }
+"else if"      { return TT_ELSEIF; }
 "when"         { return TT_WHEN; }
 "while"        { return TT_WHILE; }
 "for"          { return TT_FOR; }

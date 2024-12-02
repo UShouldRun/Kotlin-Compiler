@@ -10,20 +10,25 @@
 #include <string.h>
 
 #include "ast.h"
-#include "error.h"
 
-// Print the AST 
-void ast_print_obj       (FILE* file, ASTN_Obj obj, int indent);
-void ast_print_stmt      (FILE* file, ASTN_Stmt stmt, int indent);
-void ast_print_expr      (FILE* file, ASTN_Expr expr);
-void ast_print_fun_call  (FILE* file, ASTN_Token fun, ASTN_ExprList args);
-void ast_print_expr_list (FILE* file, ASTN_ExprList expr);
-void ast_print_ktype     (FILE* file, ASTN_KType node);
-void ast_print_token     (FILE* file, ASTN_Token token);
-void ast_print_indent    (FILE* file, int indent, const char* str);
+// AST Type Check
+bool ast_type_check_obj   (FILE*, HashTable, ASTN_Obj);
+bool ast_type_check_stmt  (FILE*, HashTable, ASTN_Stmt, ASTN_FunRet);
+bool ast_type_check_ktype (FILE*, HashTable, ASTN_KType);
+void ast_error            (ASTN_Token, const char*);
 
-const char* ast_match_expr_op       (ASTN_ExprOp op);
-const char* ast_match_ktype_default (ASTN_KTypeDefault ktype);
+// AST Print
+void ast_print_obj        (FILE*, ASTN_Obj, int);
+void ast_print_stmt       (FILE*, ASTN_Stmt, int);
+void ast_print_expr       (FILE*, ASTN_Expr);
+void ast_print_fun_call   (FILE*, ASTN_Token, ASTN_ExprList);
+void ast_print_expr_list  (FILE*, ASTN_ExprList);
+void ast_print_ktype      (FILE*, ASTN_KType);
+void ast_print_token      (FILE*, ASTN_Token);
+void ast_print_indent     (FILE*, int, const char*);
+
+const char* ast_match_expr_op       (ASTN_ExprOp);
+const char* ast_match_ktype_default (ASTN_KTypeDefault);
 
 // AST KOTLIN TYPES
 struct astn_ktype {
