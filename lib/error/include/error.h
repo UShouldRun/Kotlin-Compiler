@@ -66,7 +66,10 @@ typedef enum {
 #define ERROR_INVALID_KTYPE       "Invalid KType Default"
 
 #define ERROR_UNDEFINED_FUN       "Undefined function"
+#define ERROR_UNDEFINED_IDENT     "Undefined identifier"
+#define ERROR_UNDEFINED_KTYPE     "Undefined type"
 
+#define ERROR_TYPE_CONFLICT_NUM   "Type conflict (type must be number)"
 #define ERROR_TYPE_CONFLICT       "Type conflict"
 #define ERROR_TYPE_FEW_ARGS       "Few arguments passed into function"
 #define ERROR_TYPE_MANY_ARGS      "Many arguments passed into function"
