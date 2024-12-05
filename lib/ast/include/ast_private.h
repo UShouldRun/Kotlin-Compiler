@@ -12,29 +12,32 @@
 #include "ast.h"
 
 // AST Type Check
-bool        ast_type_check_obj        (FILE*, HashTable, ASTN_Obj);
-bool        ast_type_check_stmt       (FILE*, HashTable, Stack, ASTN_Stmt, ASTN_FunRet);
-bool        ast_type_check_ktype_same (ASTN_KType, ASTN_KType);
-bool        ast_type_check_ktype      (FILE*, HashTable, ASTN_KType);
+bool        ast_type_check_obj             (const char*, HashTable, ASTN_Obj);
+bool        ast_type_check_stmt            (const char*, HashTable, Stack, ASTN_Stmt, ASTN_FunRet);
+ASTN_KType  ast_type_check_expr            (const char* file, HashTable table, ASTN_Expr);
+bool        ast_type_check_expr_is_bool    (const char*, HashTable, ASTN_Expr);
+bool        ast_type_check_ktype_same      (ASTN_KType, ASTN_KType);
+bool        ast_type_check_ktype_is_number (const char*, HashTable, ASTN_KType);
+bool        ast_type_check_ktype           (const char*, HashTable, ASTN_KType);
 
-void        ast_error                 (const char*, const char*, uint32_t, uint32_t);
+void        ast_error                      (const char*, const char*, uint32_t, uint32_t);
 
-uint32_t    ast_get_pos_line          (void*, ASTN_Type);
-uint32_t    ast_get_pos_rel           (void*, ASTN_Type);
+uint32_t    ast_get_pos_line               (void*, ASTN_Type);
+uint32_t    ast_get_pos_rel                (void*, ASTN_Type);
 
 // AST Print
-void        ast_print_obj             (FILE*, ASTN_Obj, int32_t);
-void        ast_print_fun_decl        (FILE*, ASTN_Obj);
-void        ast_print_stmt            (FILE*, ASTN_Stmt, int32_t);
-void        ast_print_expr            (FILE*, ASTN_Expr);
-void        ast_print_fun_call        (FILE*, ASTN_Token, ASTN_ExprList);
-void        ast_print_expr_list       (FILE*, ASTN_ExprList);
-void        ast_print_ktype           (FILE*, ASTN_KType);
-void        ast_print_token           (FILE*, ASTN_Token);
-void        ast_print_indent          (FILE*, int32_t, const char*);
+void        ast_print_obj                  (FILE*, ASTN_Obj, int32_t);
+void        ast_print_fun_decl             (FILE*, ASTN_Obj);
+void        ast_print_stmt                 (FILE*, ASTN_Stmt, int32_t);
+void        ast_print_expr                 (FILE*, ASTN_Expr);
+void        ast_print_fun_call             (FILE*, ASTN_Token, ASTN_ExprList);
+void        ast_print_expr_list            (FILE*, ASTN_ExprList);
+void        ast_print_ktype                (FILE*, ASTN_KType);
+void        ast_print_token                (FILE*, ASTN_Token);
+void        ast_print_indent               (FILE*, int32_t, const char*);
 
-const char* ast_match_expr_op         (ASTN_ExprOp);
-const char* ast_match_ktype_default   (ASTN_KTypeDefault);
+const char* ast_match_expr_op              (ASTN_ExprOp);
+const char* ast_match_ktype_default        (ASTN_KTypeDefault);
 
 // AST KOTLIN TYPES
 struct astn_ktype {
