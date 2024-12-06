@@ -65,6 +65,7 @@ typedef enum {
 #define ERROR_INVALID_STMT        "Invalid Statement"
 #define ERROR_INVALID_OBJ         "Invalid Object"
 #define ERROR_INVALID_KTYPE       "Invalid KType Default"
+#define ERROR_INVALID_ASTNT       "Invalid ASTN Type"
 
 #define ERROR_UNDEFINED_FUN       "Undefined function"
 #define ERROR_UNDEFINED_IDENT     "Undefined identifier"

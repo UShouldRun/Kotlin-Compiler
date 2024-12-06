@@ -888,15 +888,45 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
 }
 
 bool ast_type_check_expr_is_bool(const char* file, Arena arena, HashTable table, ASTN_Expr node) {
-
+  ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node);
+  return expr_ktype != NULL && expr_ktype->is_default && expr_ktype.type._default == KOTLIN_BOOLEAN;
 }
 
 bool ast_type_check_ktype_same(ASTN_KType a, ASTN_KType b) {
-
+  return a != NULL && b != NULL && (
+       (a.is_default && b.is_default && a.type._default == b.type._default) 
+    || (!a.is_default && !b.is_default && ast_type_check_token_equals(a.type._defined, b.type._defined))
+  );
 }
 
-bool ast_type_check_ktype_is_number(const char* file, HashTable table, ASTN_KType node) {
+bool ast_type_check_token_equals(ASTN_Token a, ASTN_Token b) {
+  if (a == NULL || b == NULL)
+    return false;
+  if (a->type != b.type)
+    return false;
+  switch (a->type) {
+    case TT_LIT_NULL: case TT_LIT_TRUE: case TT_LIT_FALSE: 
+      { return true; }
+    case TT_LIT_NUMBER: 
+      { return a->value.lit_number == b->value.lit_number; }
+    case TT_LIT_REAL:
+      { return a->value.lit_real == b->value.lit_real; }
+    case TT_LIT_STRING:
+      { return strcmp(a->value.lit_str, b->value.lit_str) == 0; }
+    case TT_IDENT:
+      { return strcmp(a->value.ident, b->value.ident) == 0; }
+    default:
+      { error_panic(error_type_checker, ERROR_INVALID_TT); }
+  }
+  return false;
+}
 
+bool ast_type_check_ktype_is_number(ASTN_KType node) {
+  return node != NULL && node->is_default && (
+       node->type._default == KOTLIN_BYTE  || node->type._default == KOTLIN_SHORT
+    || node->type._default == KOTLIN_INT   || node->type._default == KOTLIN_LONG
+    || node->type._default == KOTLIN_FLOAT || node->type._default == KOTLIN_DOUBLE
+  );
 }
 
 bool ast_type_check_ktype(const char* file, HashTable table, ASTN_KType ktype) {
@@ -907,11 +937,82 @@ bool ast_type_check_ktype(const char* file, HashTable table, ASTN_KType ktype) {
 }
 
 uint32_t ast_get_pos_line(void* node, ASTN_Type type) {
+  error_assert(error_nullptr, node != NULL);
 
+  switch (type) {
+    case ASTN_TOKEN: { return ((ASTN_Token)node)->pos_line; }
+    case ASTN_EXPR: {
+      ASTN_Expr node_expr = (ASTN_Expr)node;
+      switch (node_expr->type) {
+        case EXPR_TOKEN:    { return ast_get_pos_line((void*)(node_expr->expr.token), ASTN_TOKEN); }
+        case EXPR_UN:       { return ast_get_pos_line((void*)(node_expr->expr.un.operand), ASTN_EXPR); }
+        case EXPR_BIN:      { return ast_get_pos_line((void*)(node_expr->expr.bin.left), ASTN_EXPR); }
+        case EXPR_FUN_CALL: { return ast_get_pos_line((void*)(node_expr->expr.fun_call.fun), ASTN_TOKEN); }
+        default:            { error_panic(error_type_checker, ERROR_INVALID_EXPR); }
+      }
+      break;
+    }
+    case ASTN_STMT: {
+      ASTN_Stmt node_stmt = (ASTN_Stmt)node;
+      switch (node_stmt->type) {
+        case STMT_IF: case STMT_ELSEIF: case STMT_ELSE: case STMT_CASE: {
+          return ast_get_pos_line((void*)(node_stmt->stmt._if.cond), ASTN_EXPR);
+        }
+        case STMT_DO: case STMT_WHILE: {
+          return ast_get_pos_line((void*)(node_stmt->stmt._while.cond), ASTN_EXPR);
+        }
+        case STMT_FOR: {
+          return ast_get_pos_line((void*)(node_stmt->stmt._for.cond), ASTN_EXPR);
+        }
+        case STMT_WHEN: {
+          return ast_get_pos_line((void*)(node_stmt->stmt._when.cond), ASTN_EXPR);
+        }
+        case STMT_BLOCK: {
+          return ast_get_pos_line((void*)(node_stmt->stmt.block), ASTN_STMT);
+        }
+        case STMT_RETURN: {
+          return ast_get_pos_line((void*)(node_stmt->stmt._ret.value.expr), ASTN_EXPR);
+        }
+        case STMT_FUN_CALL: {
+          return ast_get_pos_line((void*)(node_stmt->stmt._fun_call.fun), ASTN_TOKEN);
+        }
+        case STMT_VAR_DECL: case STMT_VAR_DECL_ASSIGN: case STMT_VAR_DIRECT_ASSIGN:
+        case STMT_VAR_INCR_AFTER:  case STMT_VAR_DECR_AFTER:
+        case STMT_VAR_INCR_BEFORE: case STMT_VAR_DECR_BEFORE:
+        case STMT_VAR_EQUALS_PLUS: case STMT_VAR_EQUALS_MINUS:
+        case STMT_VAR_EQUALS_MUL:  case STMT_VAR_EQUALS_DIV: {
+          return ast_get_pos_line((void*)(node_stmt->stmt._assign.var), ASTN_TOKEN);
+        }
+        default: {
+          error_panic(error_type_checker, ERROR_INVALID_STMT);
+        }
+      }
+      break;
+    }
+    default: {
+      error_panic(error_type_checker, ERROR_INVALID_ASTNT);
+    }
+  }
+
+  return 1;
 }
 
 uint32_t ast_get_pos_rel(void* node, ASTN_Type type) {
+  error_assert(error_nullptr, node != NULL);
 
+  switch (type) {
+    case ASTN_TOKEN: {
+      return ((ASTN_Token)node)->pos_rel;
+    }
+    case ASTN_EXPR: case ASTN_STMT: {
+      return 0;
+    }
+    default: {
+      error_panic(error_type_checker, ERROR_INVALID_ASTNT);
+    }
+  }
+
+  return 0;
 }
 
 // AST Print

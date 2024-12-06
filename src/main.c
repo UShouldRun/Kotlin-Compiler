@@ -29,7 +29,10 @@ int32_t main(int32_t argc, char* argv[]) {
   error_assert(error_nullptr, arena != NULL);
 
   yyparse();
-  ast_print(stdout, ast);
+  // ast_print(stdout, ast);
+  const uint64_t s_buckets = 256;
+  const float load_threshold_factor = 0.75;
+  (void)ast_type_check(filename, ast, s_buckets, load_threshold_factor);
 
   error_assert(error_unexp, arena_destroy(arena));
   fclose(yyin);

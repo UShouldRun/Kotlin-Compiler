@@ -17,7 +17,7 @@ bool        ast_type_check_stmt            (const char*, Arena, HashTable, Stack
 ASTN_KType  ast_type_check_expr            (const char*, Arena, HashTable, ASTN_Expr);
 bool        ast_type_check_expr_is_bool    (const char*, Arena, HashTable, ASTN_Expr);
 bool        ast_type_check_ktype_same      (ASTN_KType, ASTN_KType);
-bool        ast_type_check_ktype_is_number (const char*, HashTable, ASTN_KType);
+bool        ast_type_check_ktype_is_number (ASTN_KType);
 bool        ast_type_check_ktype           (const char*, HashTable, ASTN_KType);
 
 void        ast_error                      (const char*, const char*, uint32_t, uint32_t);
