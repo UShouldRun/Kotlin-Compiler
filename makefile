@@ -81,12 +81,12 @@ $(ZIP):
 	@echo "Zipped the directory to $@"
 
 # Rule to build the final binary executable
-$(TARGET): $(SRC) | lexer parser ast hashtable hashmap arena error
+$(TARGET): $(SRC) | error arena hashmap hashtable ast parser lexer
 	@$(CC) -Wall -o $(BINDIR)/$(TARGET) $< $(DEP)
 	@echo "Built the target binary $(BINDIR)/$(TARGET)"
 
 # Rule to compile source files
-$(BUILDDIR)/$(TARGET).o: $(SRC) | error arena ast parser lexer
+$(BUILDDIR)/$(TARGET).o: $(SRC) | error arena hashmap hashtable ast parser lexer
 	@$(CC) -Wall $(DEBUG) -o $@ $< $(DEP)
 	@echo "Compiled $@"
 
@@ -111,7 +111,7 @@ $(HASH_DIR)/build/libhashmap.o: $(HASH_SRC)
 	@echo "Compiled HashMap"
 
 $(AST_DIR)/build/libhashtable.o: $(HASHT_SRC)
-	@$(CC) $(CFLAGS) $(DEBUG) -o $(HASHT_OBJ) -c $< -I$(AST_INC)
+	@$(CC) $(CFLAGS) $(DEBUG) -o $(HASHT_OBJ) -c $< -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -I$(HASH_INC) -lerror -L$(ERROR_LIB) -lhashmap -L$(HASH_LIB)
 	@$(LIB_CREATE) $@ $(HASHT_OBJ)
 	@echo "Compiled HashTable"
 

@@ -2,7 +2,7 @@
 #define HASH_TABLE_H
 
 #include "hashmap.h"
-#include "ast_private.h"
+#include "ast.h"
 
 // ==================================================# PUBLIC #=================================================================
 
@@ -32,7 +32,7 @@ bool       hashtable_free             (HashTable table);
 Stack      stack_create               ();
 uint64_t   stack_size                 (Stack stack);
 ASTN_Token stack_pop                  (Stack* stack);
-bool       stack_pop_frame            (Stack* stack);
+bool       stack_pop_frame            (Stack* stack, HashTable table);
 bool       stack_push                 (Stack* stack, ASTN_Token token);
 bool       stack_push_frame           (Stack* stack);
 bool       stack_is_frame             (Stack stack);

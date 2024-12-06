@@ -1,6 +1,7 @@
-#ifndef HASH_TABLE_H
-#define HASH_TABLE_H
+#ifndef HASH_TABLE_PRIVATE_H
+#define HASH_TABLE_PRIVATE_H
 
+#include "ast_private.h"
 #include "hashtable.h"
 
 // ==================================================# PRIVATE #===========================================================
@@ -12,10 +13,10 @@ typedef struct hashtable_value {
 
 struct stack_table {
   bool frame;
-  ASTN_Token node;
+  ASTN_Token token;
   Stack next;
 };
 
 void hashtable_free_ktype(void* ktype);
 
-#endif // HASH_TABLE_H
+#endif // HASH_TABLE_PRIVATE_H

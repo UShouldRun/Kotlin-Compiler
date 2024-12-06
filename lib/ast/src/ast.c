@@ -1,4 +1,16 @@
-#include "hashtable_private.h"
+#include "ast_private.h"
+
+static const uint64_t astn_sizes[] = {
+  sizeof(struct astn_program),
+  sizeof(struct astn_obj),
+  sizeof(struct astn_enum_val),
+  sizeof(struct astn_fun_ret),
+  sizeof(struct astn_fun_arg),
+  sizeof(struct astn_stmt),
+  sizeof(struct astn_expr),
+  sizeof(struct astn_ktype),
+  sizeof(struct astn_token)
+};
 
 // =======================================# PUBLIC #==========================================
 

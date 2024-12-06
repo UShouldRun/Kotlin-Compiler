@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "ast.h"
+#include "hashtable.h"
 
 // AST Type Check
 bool        ast_type_check_obj             (const char*, HashTable, ASTN_Obj);
@@ -168,18 +169,6 @@ struct astn_obj {
 struct astn_program {
   const char* name;
   ASTN_Obj    objects;
-};
-
-static uint64_t astn_sizes[] = {
-  sizeof(struct astn_program),
-  sizeof(struct astn_obj),
-  sizeof(struct astn_enum_val),
-  sizeof(struct astn_fun_ret),
-  sizeof(struct astn_fun_arg),
-  sizeof(struct astn_stmt),
-  sizeof(struct astn_expr),
-  sizeof(struct astn_ktype),
-  sizeof(struct astn_token)
 };
 
 #endif // !AST_PRIVATE_H

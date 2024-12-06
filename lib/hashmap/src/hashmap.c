@@ -179,7 +179,7 @@ bool hashmap_remove(HashMap hashmap, char *key, void free_value(void *value)) {
   HashMapNode *current = &(hashmap->buckets[index].next);
   for (; *current != NULL && strcmp((*current)->key, key) != 0; current = &((*current)->next));
   if (*current == NULL)
-    return;
+    return false;
   HashMapNode delete = *current;
   *current = (*current)->next;
   if (free_value) {
