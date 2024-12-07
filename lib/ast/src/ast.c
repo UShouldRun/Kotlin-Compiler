@@ -16,7 +16,7 @@ static const uint64_t astn_sizes[] = {
 
 // AST Type Check
 
-bool ast_type_check(const char* file, AST program, uint64_t s_buckets, float load_threshold_factor) {
+bool ast_type_check(Arena arena, AST program, const char* file, uint64_t s_buckets, float load_threshold_factor) {
   error_assert(error_type_checker, file != NULL);
   error_assert(error_type_checker, program != NULL);
 
@@ -34,7 +34,7 @@ bool ast_type_check(const char* file, AST program, uint64_t s_buckets, float loa
     if (node->type == ASTN_FUN) {
       Stack stack = stack_create();
       for (ASTN_Stmt node_stmt = node->obj._fun.body; node_stmt != NULL; node_stmt = node_stmt->next)
-        type_check = type_check && ast_type_check_stmt(file, table, stack, node_stmt, node->obj._fun.ret);
+        type_check = type_check && ast_type_check_stmt(file, arena, table, stack, node_stmt, node->obj._fun.ret);
       error_assert(error_type_checker, stack_free(stack));
     }
 
@@ -328,32 +328,62 @@ ASTN_KType astn_create_ktype(Arena arena, bool is_default, ASTN_KTypeDefault _de
 // AST Type Check
 bool ast_type_check_obj(const char* file, HashTable table, ASTN_Obj node) {
   error_assert(error_type_checker, file != NULL);
-  error_assert(error_type_checker, table, != NULL);
+  error_assert(error_type_checker, table != NULL);
   error_assert(error_type_checker, node != NULL);
 
   bool type_check = true;
   switch (node->type) {
     case ASTN_FUN: {
-      error_assert(error_type_checker, hashtable_insert_obj(table, node->obj._fun.ident, node));
-      for (ASTN_FunArg node_arg = node->obj._fun.args; node_arg != NULL; node_arg = node_arg->next) {
+      error_assert(
+        error_type_checker,
+        hashtable_insert_obj(&table, node->obj._fun.ident, node)
+      );
+
+      for (
+        ASTN_FunArg node_arg = node->obj._fun.args;
+        node_arg != NULL;
+        node_arg = node_arg->next
+      ) {
         type_check = type_check && ast_type_check_ktype(file, table, node_arg->type);
-        error_assert(error_type_checker, hashtable_insert_var_ktype(table, node_arg->arg, node_arg->type));
+        error_assert(
+          error_type_checker,
+          hashtable_insert_var_ktype(&table, node_arg->arg, node_arg->type)
+        );
       }
-      for (ASTN_FunRet node_ret = node->obj._fun.ret; node_ret != NULL; node_ret = node_ret->next)
-        type_check = type_check && ast_type_check_ktype(file, table, node_ret->type);
+
+      for (
+        ASTN_FunRet node_ret = node->obj._fun.ret;
+        node_ret != NULL;
+        node_ret = node_ret->next,
+        type_check = type_check && ast_type_check_ktype(file, table, node_ret->type)
+      );
+
       break;
     }
     case ASTN_ENUM: {
-      error_assert(error_type_checker, hashtable_insert_obj(table, node->obj._enum.ident, node));
+      error_assert(
+        error_type_checker,
+        hashtable_insert_obj(&table, node->obj._enum.ident, node)
+      );
+
       int32_t i = 0;
-      for (ASTN_EnumVal node_value = node->obj._enum.values; node_value != NULL; node_value = node_value->next, i++) {
+      for (
+        ASTN_EnumVal node_value = node->obj._enum.values;
+        node_value != NULL;
+        node_value = node_value->next,
+        i++
+      ) {
         if (!node_value->is_atributed) {
           node_value->atribute->type = TT_LIT_NUMBER;
           node_value->atribute->value.lit_number = i;
           node_value->is_atributed = true;
         }
-        error_assert(error_type_checker, hashtable_insert_global(table, node_value->value, node_value->atribute))
+        error_assert(
+          error_type_checker,
+          hashtable_insert_global(&table, node_value->value, node_value->atribute)
+        );
       }
+
       break;
     }
     default: {
@@ -364,7 +394,7 @@ bool ast_type_check_obj(const char* file, HashTable table, ASTN_Obj node) {
   return type_check;
 }
 
-bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack stack, ASTN_Stmt node, ASTN_FunRet ret) {
+bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack stack, ASTN_Stmt node, ASTN_FunRet ret) {
   error_assert(error_type_checker, file != NULL); 
   error_assert(error_type_checker, arena != NULL);
   error_assert(error_type_checker, table != NULL);
@@ -381,7 +411,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
         bool check_cond  = ast_type_check_expr_is_bool(file, arena, table, node->stmt._while.cond),
              check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt._while.block, ret);
         type_check = type_check && check_cond && check_block;
-        stack_pop_frame(&stack);
+        stack_pop_frame(&stack, table);
         break;
       }
       case STMT_FOR: {
@@ -391,7 +421,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
              check_incr  = ast_type_check_stmt(file, arena, table, stack, node->stmt._for.incr, NULL),
              check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt._for.block, ret);
         type_check = type_check && check_init && check_cond && check_incr && check_block;
-        stack_pop_frame(&stack);
+        stack_pop_frame(&stack, table);
         break;
       }
       case STMT_IF: {
@@ -399,38 +429,61 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
         bool check_cond  = ast_type_check_expr_is_bool(file, arena, table, node->stmt._if.cond),
              check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt._if.block, ret);
         type_check = type_check && check_cond && check_block;
-        stack_pop_frame(&stack);
+        stack_pop_frame(&stack, table);
 
-        for (ASTN_Stmt node_stmt = node->stmt._if.next; node_stmt != NULL; node_stmt = node_stmt->stmt._if.next) {
+        for (
+          ASTN_Stmt node_stmt = node->stmt._if.next;
+          node_stmt != NULL;
+          node_stmt = node_stmt->stmt._if.next
+        ) {
           stack_push_frame(&stack);
 
-          error_assert(error_type_checker, node_stmt != node_stmt->stmt._if.next);
-          error_assert(error_type_checker, node_stmt->type == STMT_ELSEIF || node_stmt->type == STMT_ELSE);
+          error_assert(
+            error_type_checker,
+            node_stmt != node_stmt->stmt._if.next
+          );
+          error_assert(
+            error_type_checker,
+            node_stmt->type == STMT_ELSEIF || node_stmt->type == STMT_ELSE
+          );
 
-          check_cond  = (node->type == STMT_ELSE || ast_type_check_expr_is_bool(file, arena, table, node->stmt._if.cond));
+          check_cond  = (
+            node->type == STMT_ELSE ||
+            ast_type_check_expr_is_bool(file, arena, table, node->stmt._if.cond)
+          );
           check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt._if.block, ret);
           type_check  = type_check && check_cond && check_block;
 
-          stack_pop_frame(&stack);
+          stack_pop_frame(&stack, table);
         }
 
         break;
       }
       case STMT_WHEN: {
-        ASTN_KType switch_ktype = ast_type_check_expr(file, table, node->stmt._when.cond);
+        ASTN_KType switch_ktype = ast_type_check_expr(file, arena, table, node->stmt._when.cond);
         bool check_cases = true;
-        type_check = type_check && check_cond;
+        type_check = type_check && switch_ktype;
 
-        for (ASTN_Stmt node_stmt = node->stmt._when.cases; node_stmt != NULL; node_stmt = node_stmt->stmt._if.next) {
-          error_assert(error_type_checker, node_stmt != node_stmt->stmt._if.next);
-          error_assert(error_type_checker, node_stmt->type == STMT_CASE || node_stmt->type == STMT_ELSE);
+        for (
+          ASTN_Stmt node_stmt = node->stmt._when.cases;
+          node_stmt != NULL;
+          node_stmt = node_stmt->stmt._if.next
+        ) {
+          error_assert(
+            error_type_checker,
+            node_stmt != node_stmt->stmt._if.next
+          );
+          error_assert(
+            error_type_checker,
+            node_stmt->type == STMT_CASE || node_stmt->type == STMT_ELSE
+          );
 
           ASTN_KType case_cond_ktype = ast_type_check_expr(file, arena, table, node_stmt->stmt._if.cond);
-          check_cond  = ast_type_check_ktype_same(switch_ktype, case_cond_ktype); 
+          bool check_cond  = ast_type_check_ktype_same(switch_ktype, case_cond_ktype); 
 
           stack_push_frame(&stack);
           bool check_case = ast_type_check_stmt(file, arena, table, stack, node_stmt->stmt._if.block, ret);
-          stack_pop_frame(&stack);
+          stack_pop_frame(&stack, table);
 
           check_cases = check_cases && check_cond && check_case;
         }
@@ -441,13 +494,13 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
       case STMT_BLOCK: {
         stack_push_frame(&stack);
         bool check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt.block, ret);
-        stack_pop_frame(&stack);
+        stack_pop_frame(&stack, table);
 
         type_check = type_check && check_block;
         break;
       }
       case STMT_FUN_CALL: {
-        ASTN_Obj node_fun = hashtable_lookup_obj(hashtable, node->stmt._fun_call.fun.value.ident);
+        ASTN_Obj node_fun = hashtable_lookup_obj(table, node->stmt._fun_call.fun);
         if (node_fun == NULL) {
           ast_error(
             ERROR_UNDEFINED_FUN,
@@ -457,7 +510,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
           );
           type_check = false;
         } else {
-          ASTN_ExprList fc_arg = node->stmt._fun_call.fun.args;
+          ASTN_ExprList fc_arg = node->stmt._fun_call.args;
           ASTN_FunArg   f_arg  = node_fun->obj._fun.args;  
 
           while (f_arg != NULL && fc_arg != NULL) {
@@ -514,7 +567,6 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
               ast_get_pos_line((void*)node_ret->expr, ASTN_EXPR),
               ast_get_pos_rel((void*)node_ret->expr, ASTN_EXPR)
             );
-            ast_print_fun_decl(stderr, node_fun);
             type_check = false;
           }
 
@@ -543,35 +595,47 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
         break;
       }
       case STMT_VAR_DECL: {
-        if (!ast_type_check_ktype(node->stmt._assign.ktype)) {
+        if (!ast_type_check_ktype(file, table, node->stmt._assign.ktype)) {
           ast_error(
             ERROR_UNDEFINED_KTYPE,
             file,
-            ast_get_pos_line((void*)node->stmt._assign.ktype.type.token, ASTN_TOKEN),
-            ast_get_pos_rel((void*)node->stmt._assign.ktype.type.token, ASTN_TOKEN)
+            ast_get_pos_line((void*)node->stmt._assign.ktype->type._defined->value.ident, ASTN_TOKEN),
+            ast_get_pos_rel((void*)node->stmt._assign.ktype->type._defined->value.ident, ASTN_TOKEN)
           );
           type_check = false;
         }
 
-        error_assert(error_type_checker, hashtable_insert_var_ktype(&table, node->stmt._assign.var, node->stmt._assign.ktype));
-        error_assert(error_type_checker, stack_push(node->stmt._assign.var));
+        error_assert(
+          error_type_checker,
+          hashtable_insert_var_ktype(&table, node->stmt._assign.var, node->stmt._assign.ktype)
+        );
+        error_assert(
+          error_type_checker,
+          stack_push(&stack, node->stmt._assign.var)
+        );
         break;
       } 
       case STMT_VAR_DECL_ASSIGN: {
-        if (!ast_type_check_ktype(node->stmt._assign.ktype)) {
+        if (!ast_type_check_ktype(file, table, node->stmt._assign.ktype)) {
           ast_error(
             ERROR_UNDEFINED_KTYPE,
             file,
-            ast_get_pos_line((void*)node->stmt._assign.ktype.type.token, ASTN_TOKEN),
-            ast_get_pos_rel((void*)node->stmt._assign.ktype.type.token, ASTN_TOKEN)
+            ast_get_pos_line((void*)node->stmt._assign.ktype->type._defined->value.ident, ASTN_TOKEN),
+            ast_get_pos_rel((void*)node->stmt._assign.ktype->type._defined->value.ident, ASTN_TOKEN)
           );
           type_check = false;
         }
 
-        error_assert(error_type_checker, hashtable_insert_var_ktype(&table, node->stmt._assign.var, node->stmt._assign.ktype));
-        error_assert(error_type_checker, stack_push(node->stmt._assign.var));
+        error_assert(
+          error_type_checker,
+          hashtable_insert_var_ktype(&table, node->stmt._assign.var, node->stmt._assign.ktype)
+        );
+        error_assert(
+          error_type_checker,
+          stack_push(&stack, node->stmt._assign.var)
+        );
 
-        ASTN_KType expr_ktype = ast_type_check_expr(node->stmt._assign.value);
+        ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node->stmt._assign.value);
         bool check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
         if (!check_expr) {
           ast_error(
@@ -579,14 +643,14 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
             file,
             ast_get_pos_line((void*)node, ASTN_STMT),
             ast_get_pos_rel((void*)node, ASTN_STMT)
-          )
+          );
         }
 
         type_check = type_check && check_expr;
         break;
       }
       case STMT_VAR_DIRECT_ASSIGN: {
-        ASTN_KType var_ktype = hashtable_lookup_var_ktype(hashtable, node->stmt._assign.var);
+        ASTN_KType var_ktype = hashtable_lookup_var_ktype(table, node->stmt._assign.var);
 
         if (var_ktype == NULL) {
           ast_error(
@@ -605,7 +669,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
               file,
               ast_get_pos_line((void*)node, ASTN_STMT),
               ast_get_pos_rel((void*)node, ASTN_STMT)
-            )
+            );
           }
 
           type_check = type_check && check_expr;
@@ -614,7 +678,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
       }
       case STMT_VAR_INCR_BEFORE: case STMT_VAR_DECR_BEFORE:
       case STMT_VAR_INCR_AFTER:  case STMT_VAR_DECR_AFTER: {
-        ASTN_KType var_ktype = hashtable_lookup_var_ktype(hashtable, node->stmt._assign.var);
+        ASTN_KType var_ktype = hashtable_lookup_var_ktype(table, node->stmt._assign.var);
         if (var_ktype == NULL) {
           ast_error(
             ERROR_UNDEFINED_IDENT,
@@ -631,7 +695,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
               file,
               ast_get_pos_line((void*)node, ASTN_STMT),
               ast_get_pos_rel((void*)node, ASTN_STMT)
-            )
+            );
           }
 
           type_check = type_check && check_ktype;
@@ -641,7 +705,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
       }
       case STMT_VAR_EQUALS_PLUS: case STMT_VAR_EQUALS_MINUS:
       case STMT_VAR_EQUALS_MUL:  case STMT_VAR_EQUALS_DIV: {
-        ASTN_KType var_ktype = hashtable_lookup_var_ktype(hashtable, node->stmt._assign.var);
+        ASTN_KType var_ktype = hashtable_lookup_var_ktype(table, node->stmt._assign.var);
         if (var_ktype == NULL) {
           ast_error(
             ERROR_UNDEFINED_IDENT,
@@ -658,7 +722,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
               file,
               ast_get_pos_line((void*)node, ASTN_STMT),
               ast_get_pos_rel((void*)node, ASTN_STMT)
-            )
+            );
           }
           type_check = type_check && check_ktype;
 
@@ -671,7 +735,7 @@ bool ast_type_check_stmt(Arena arena, const char* file, HashTable table, Stack s
               file,
               ast_get_pos_line((void*)node, ASTN_STMT),
               ast_get_pos_rel((void*)node, ASTN_STMT)
-            )
+            );
           }
 
           type_check = type_check && check_expr;
@@ -733,7 +797,7 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
           error_assert(error_mem, token_ktype != NULL);
           token_ktype->is_default = true;
 
-          switch (node->type) {
+          switch (token->type) {
             case TT_LIT_REAL: {
               token_ktype->type._default = KOTLIN_DOUBLE;
               break;
@@ -749,6 +813,9 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
             case TT_LIT_STRING: {
               token_ktype->type._default = KOTLIN_STRING;
               break;
+            }
+            case TT_IDENT: default: {
+              error_panic(error_type_checker, ERROR_INVALID_TT);
             }
           }
 
@@ -767,9 +834,8 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
           ast_get_pos_rel((void*)token, ASTN_TOKEN)
         );
       } else {
-        expr_ktype = (ASTN_KType)arena_alloc(arena, sizeof(struct astn_ktype));
+        expr_ktype = ast_type_check_ktype_copy(arena, token_ktype);;
         error_assert(error_mem, expr_ktype != NULL);
-        ast_type_check_ktype_copy(expr_ktype, token_ktype);
       }
 
       break;
@@ -799,10 +865,10 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
           if (un_ktype == NULL)
             break;
 
-          if (!(un_ktype->is_default && ast_type_check_ktype_is_bool(un_ktype))) {
+          if (!(un_ktype->is_default && un_ktype->type._default == KOTLIN_BOOLEAN)) {
             ast_error(
               file,
-              ERROR_TYPE_CONFLICT_NUM,
+              ERROR_TYPE_CONFLICT_BOOL,
               ast_get_pos_line((void*)node, ASTN_EXPR),
               ast_get_pos_rel((void*)node, ASTN_EXPR)
             );
@@ -813,7 +879,7 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
           break;
         }
         case OP_UN_PAREN: {
-          return ast_type_check_expr(node->expr.unary.operand);
+          return ast_type_check_expr(file, arena, table, node->expr.unary.operand);
         }
         default: {
           error_panic(error_type_checker, ERROR_INVALID_EXPR_OP);
@@ -822,8 +888,8 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
       break;
     }
     case EXPR_BIN: {
-      ASTN_KType left_ktype  = ast_type_check_expr(node->expr.binary.left),
-                 right_ktype = ast_type_check_expr(node->expr.binary.right);
+      ASTN_KType left_ktype  = ast_type_check_expr(file, arena, table, node->expr.binary.left),
+                 right_ktype = ast_type_check_expr(file, arena, table, node->expr.binary.right);
       if (left_ktype != NULL && right_ktype != NULL) {
         if (!ast_type_check_ktype_same(left_ktype, right_ktype)) {
           ast_error(
@@ -833,15 +899,14 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
             ast_get_pos_rel((void*)node, ASTN_EXPR)
           );
         } else {
-          expr_ktype = (ASTN_KType)arena_alloc(arena, sizeof(struct astn_ktype));
+          expr_ktype = ast_type_check_ktype_copy(arena, left_ktype);
           error_assert(error_mem, expr_ktype != NULL);
-          ast_type_check_ktype_copy(expr_ktype, left_ktype);
         }
       }
       break;
     }
     case EXPR_FUN_CALL: {
-      ASTN_Obj node_fun = hashtable_lookup_obj(hashtable, node->expr.fun_call.fun.value.ident);
+      ASTN_Obj node_fun = hashtable_lookup_obj(table, node->expr.fun_call.fun);
       if (node_fun == NULL) {
         ast_error(
           ERROR_UNDEFINED_FUN,
@@ -850,7 +915,7 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
           ast_get_pos_rel((void*)node, ASTN_EXPR)
         );
       } else {
-        ASTN_ExprList fc_arg = node->expr.fun_call.fun.args;
+        ASTN_ExprList fc_arg = node->expr.fun_call.args;
         ASTN_FunArg   f_arg  = node_fun->obj._fun.args;  
 
         while (f_arg != NULL && fc_arg != NULL) {
@@ -864,7 +929,6 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
               ast_get_pos_rel((void*)fc_arg->expr, ASTN_EXPR)
             );
             ast_print_fun_decl(stderr, node_fun);
-            type_check = false;
           }
 
           f_arg  = f_arg->next;
@@ -879,7 +943,6 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
             ast_get_pos_rel((void*)node, ASTN_EXPR)
           );
           ast_print_fun_decl(stderr, node_fun);
-          type_check = false;
         } else if (f_arg == NULL && fc_arg != NULL) {
           ast_error(
             ERROR_TYPE_MANY_ARGS,
@@ -888,7 +951,6 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
             ast_get_pos_rel((void*)fc_arg, ASTN_EXPR)
           );
           ast_print_fun_decl(stderr, node_fun);
-          type_check = false;
         }
       }
 
@@ -899,22 +961,60 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
   return expr_ktype;
 }
 
+ASTN_KType ast_type_check_ktype_copy(Arena arena, ASTN_KType ktype) {
+  error_assert(error_nullptr, arena != NULL);
+  if (!ktype) return NULL;
+
+  ASTN_KType cp = (ASTN_KType)arena_alloc(arena, sizeof(struct astn_ktype));
+  error_assert(error_mem, cp != NULL);
+
+  cp->is_default = ktype->is_default;
+  if (!cp->is_default) {
+    cp->type._defined = (ASTN_Token)arena_alloc(arena, sizeof(struct astn_token));
+    error_assert(error_mem, cp->type._defined != NULL);
+
+    cp->type._defined->type = ktype->type._defined->type;
+    switch (cp->type._defined->type) {
+      case TT_IDENT: {
+        char* id_cp = NULL,
+            * id = (char*)ktype->type._defined->value.ident;
+        if (id != NULL) {
+          uint64_t len = strlen(id) + 1;
+          id_cp = (char*)arena_alloc(arena, len);
+          error_assert(error_mem, id_cp != NULL);
+          memcpy(id_cp, id, len);
+        }
+        cp->type._defined->value.ident = id_cp;
+        break;
+      }
+      default: {
+        error_panic(error_type_checker, ERROR_INVALID_TT);
+        break;
+      }
+    }
+  } else {
+    cp->type._default = ktype->type._default;
+  }
+
+  return cp;
+}
+
 bool ast_type_check_expr_is_bool(const char* file, Arena arena, HashTable table, ASTN_Expr node) {
   ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node);
-  return expr_ktype != NULL && expr_ktype->is_default && expr_ktype.type._default == KOTLIN_BOOLEAN;
+  return expr_ktype != NULL && expr_ktype->is_default && expr_ktype->type._default == KOTLIN_BOOLEAN;
 }
 
 bool ast_type_check_ktype_same(ASTN_KType a, ASTN_KType b) {
   return a != NULL && b != NULL && (
-       (a.is_default && b.is_default && a.type._default == b.type._default) 
-    || (!a.is_default && !b.is_default && ast_type_check_token_equals(a.type._defined, b.type._defined))
+       (a->is_default && b->is_default && a->type._default == b->type._default) 
+    || (!a->is_default && !b->is_default && ast_type_check_token_equals(a->type._defined, b->type._defined))
   );
 }
 
 bool ast_type_check_token_equals(ASTN_Token a, ASTN_Token b) {
   if (a == NULL || b == NULL)
     return false;
-  if (a->type != b.type)
+  if (a->type != b->type)
     return false;
   switch (a->type) {
     case TT_LIT_NULL: case TT_LIT_TRUE: case TT_LIT_FALSE: 
@@ -957,8 +1057,8 @@ uint32_t ast_get_pos_line(void* node, ASTN_Type type) {
       ASTN_Expr node_expr = (ASTN_Expr)node;
       switch (node_expr->type) {
         case EXPR_TOKEN:    { return ast_get_pos_line((void*)(node_expr->expr.token), ASTN_TOKEN); }
-        case EXPR_UN:       { return ast_get_pos_line((void*)(node_expr->expr.un.operand), ASTN_EXPR); }
-        case EXPR_BIN:      { return ast_get_pos_line((void*)(node_expr->expr.bin.left), ASTN_EXPR); }
+        case EXPR_UN:       { return ast_get_pos_line((void*)(node_expr->expr.unary.operand), ASTN_EXPR); }
+        case EXPR_BIN:      { return ast_get_pos_line((void*)(node_expr->expr.binary.left), ASTN_EXPR); }
         case EXPR_FUN_CALL: { return ast_get_pos_line((void*)(node_expr->expr.fun_call.fun), ASTN_TOKEN); }
         default:            { error_panic(error_type_checker, ERROR_INVALID_EXPR); }
       }
@@ -983,7 +1083,7 @@ uint32_t ast_get_pos_line(void* node, ASTN_Type type) {
           return ast_get_pos_line((void*)(node_stmt->stmt.block), ASTN_STMT);
         }
         case STMT_RETURN: {
-          return ast_get_pos_line((void*)(node_stmt->stmt._ret.value.expr), ASTN_EXPR);
+          return ast_get_pos_line((void*)(node_stmt->stmt._ret.value->expr), ASTN_EXPR);
         }
         case STMT_FUN_CALL: {
           return ast_get_pos_line((void*)(node_stmt->stmt._fun_call.fun), ASTN_TOKEN);
