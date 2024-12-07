@@ -56,8 +56,8 @@ LEXER_DEP  = -I$(PARSER_DIR)/build/parser.tab.h
 PARSER_DEP = -I$(PARSER_INC) -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -lhashtable -L$(AST_LIB) -last -L$(AST_LIB) -larena -L$(ARENA_LIB) -lerror -L$(ERROR_LIB) -lhashmap -L$(HASH_LIB)
 
 # Executable
-TARGET 	 = kotlin
-DEP 		 = $(PARSER_OBJ) $(LEXER_OBJ) -I$(PARSER_INC) -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -last -L$(AST_LIB) -larena -L$(ARENA_LIB) -lerror -L$(ERROR_LIB)
+TARGET = kotlin
+DEP 	 = $(PARSER_OBJ) $(LEXER_OBJ) -I$(PARSER_INC) -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -I$(HASH_INC) -last -lhashtable -L$(AST_LIB) -larena -L$(ARENA_LIB) -lerror -L$(ERROR_LIB) -lhashmap -L$(HASH_LIB)
 
 # Create necessary directories
 DIRS = $(BINDIR) $(BUILDDIR) $(ERROR_DIR)/build $(ARENA_DIR)/build $(AST_DIR)/build $(LEXER_DIR)/build $(PARSER_DIR)/build
@@ -81,12 +81,12 @@ $(ZIP):
 	@echo "Zipped the directory to $@"
 
 # Rule to build the final binary executable
-$(TARGET): $(SRC) | lexer parser ast hashtable hashmap arena error
+$(TARGET): $(SRC) | error arena hashmap hashtable ast parser lexer
 	@$(CC) -Wall -o $(BINDIR)/$(TARGET) $< $(DEP)
 	@echo "Built the target binary $(BINDIR)/$(TARGET)"
 
 # Rule to compile source files
-$(BUILDDIR)/$(TARGET).o: $(SRC) | error arena ast parser lexer
+$(BUILDDIR)/$(TARGET).o: $(SRC) | error arena hashmap hashtable ast parser lexer
 	@$(CC) -Wall $(DEBUG) -o $@ $< $(DEP)
 	@echo "Compiled $@"
 
@@ -105,13 +105,13 @@ $(ERROR_DIR)/build/liberror.a: $(ERROR_SRC)
 	@$(LIB_CREATE) $@ $(ERROR_OBJ)
 	@echo "Compiled Error"
 
-$(HASH_DIR)/build/libhashmap.o: $(HASH_SRC)
+$(HASH_DIR)/build/libhashmap.a: $(HASH_SRC)
 	@$(CC) $(CFLAGS) $(DEBUG) -o $(HASH_OBJ) -c $< -I$(HASH_INC)
 	@$(LIB_CREATE) $@ $(HASH_OBJ)
 	@echo "Compiled HashMap"
 
-$(AST_DIR)/build/libhashtable.o: $(HASHT_SRC)
-	@$(CC) $(CFLAGS) $(DEBUG) -o $(HASHT_OBJ) -c $< -I$(AST_INC)
+$(AST_DIR)/build/libhashtable.a: $(HASHT_SRC)
+	@$(CC) $(CFLAGS) $(DEBUG) -o $(HASHT_OBJ) -c $< -I$(AST_INC) -I$(ARENA_INC) -I$(ERROR_INC) -I$(HASH_INC) -lerror -L$(ERROR_LIB) -lhashmap -L$(HASH_LIB)
 	@$(LIB_CREATE) $@ $(HASHT_OBJ)
 	@echo "Compiled HashTable"
 
@@ -152,7 +152,9 @@ $(DIRS):
 # Clean rule
 clean:
 	@rm -f $(BUILDDIR)/*.o $(ARENA_DIR)/build/* $(AST_DIR)/build/* $(ERROR_DIR)/build/* $(HASH_DIR)/build/* $(LEXER_DIR)/build/*.c $(PARSER_DIR)/build/* $(TARGET)
-	@rm *.zip
+	@if ls *.zip 1> /dev/null 2>&1; then \
+		rm -f *.zip; \
+	fi
 	@echo "Cleaned all build directories and zip files"
 
 clean_test:
@@ -165,8 +167,8 @@ arena:  		$(ARENA_DIR)/build/libarena.a
 ast:	  		$(AST_DIR)/build/libast.a
 error:  		$(ERROR_DIR)/build/liberror.a
 lexer:  		$(LEXER_DIR)/build/lexer.yy.c
-hashmap:    $(HASH_DIR)/build/libhashmap.o
-hashtable:  $(AST_DIR)/build/libhashtable.o
+hashmap:    $(HASH_DIR)/build/libhashmap.a
+hashtable:  $(AST_DIR)/build/libhashtable.a
 parser: 		$(PARSER_DIR)/build/parser.o
 parser_tab: $(PARSER_DIR)/build/parser.tab.c
 tarena: 		$(TEST_DIR)/arena/tarena

@@ -73,7 +73,7 @@ typedef struct astn_ktype     *ASTN_KType;
 typedef struct astn_token     *ASTN_Token;
 
 // Functions
-bool          ast_type_check          (FILE*, AST, uint64_t, float);
+bool          ast_type_check          (Arena, AST, const char*, uint64_t, float);
 void          ast_print               (FILE*, AST);
 uint64_t      astn_max_size           ();
 

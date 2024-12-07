@@ -10,14 +10,17 @@
 #include <string.h>
 
 #include "ast.h"
+#include "hashtable.h"
 
 // AST Type Check
 bool        ast_type_check_obj             (const char*, HashTable, ASTN_Obj);
-bool        ast_type_check_stmt            (const char*, HashTable, Stack, ASTN_Stmt, ASTN_FunRet);
-ASTN_KType  ast_type_check_expr            (const char* file, HashTable table, ASTN_Expr);
-bool        ast_type_check_expr_is_bool    (const char*, HashTable, ASTN_Expr);
+bool        ast_type_check_stmt            (const char*, Arena, HashTable, Stack, ASTN_Stmt, ASTN_FunRet);
+ASTN_KType  ast_type_check_expr            (const char*, Arena, HashTable, ASTN_Expr);
+ASTN_KType  ast_type_check_ktype_copy      (Arena, ASTN_KType);
+bool        ast_type_check_expr_is_bool    (const char*, Arena, HashTable, ASTN_Expr);
 bool        ast_type_check_ktype_same      (ASTN_KType, ASTN_KType);
-bool        ast_type_check_ktype_is_number (const char*, HashTable, ASTN_KType);
+bool        ast_type_check_token_equals    (ASTN_Token, ASTN_Token);
+bool        ast_type_check_ktype_is_number (ASTN_KType);
 bool        ast_type_check_ktype           (const char*, HashTable, ASTN_KType);
 
 void        ast_error                      (const char*, const char*, uint32_t, uint32_t);
@@ -168,18 +171,6 @@ struct astn_obj {
 struct astn_program {
   const char* name;
   ASTN_Obj    objects;
-};
-
-static uint64_t astn_sizes[] = {
-  sizeof(struct astn_program),
-  sizeof(struct astn_obj),
-  sizeof(struct astn_enum_val),
-  sizeof(struct astn_fun_ret),
-  sizeof(struct astn_fun_arg),
-  sizeof(struct astn_stmt),
-  sizeof(struct astn_expr),
-  sizeof(struct astn_ktype),
-  sizeof(struct astn_token)
 };
 
 #endif // !AST_PRIVATE_H

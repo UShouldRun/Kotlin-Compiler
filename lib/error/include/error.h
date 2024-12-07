@@ -51,6 +51,7 @@ typedef enum {
   error_io,
   error_parser,
   error_type_checker,
+  error_intercode,
   error_end
 } ErrorType;
 
@@ -64,11 +65,13 @@ typedef enum {
 #define ERROR_INVALID_STMT        "Invalid Statement"
 #define ERROR_INVALID_OBJ         "Invalid Object"
 #define ERROR_INVALID_KTYPE       "Invalid KType Default"
+#define ERROR_INVALID_ASTNT       "Invalid ASTN Type"
 
 #define ERROR_UNDEFINED_FUN       "Undefined function"
 #define ERROR_UNDEFINED_IDENT     "Undefined identifier"
 #define ERROR_UNDEFINED_KTYPE     "Undefined type"
 
+#define ERROR_TYPE_CONFLICT_BOOL  "Type conflict (type must be bool)"
 #define ERROR_TYPE_CONFLICT_NUM   "Type conflict (type must be number)"
 #define ERROR_TYPE_CONFLICT       "Type conflict"
 #define ERROR_TYPE_FEW_ARGS       "Few arguments passed into function"

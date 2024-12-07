@@ -3,14 +3,14 @@
 #include "ast.h"
 #include "ast_private.h"
 
-Quad ic_translate_func (Arena arena, HashTable hashtable, ASTN_Obj obj){
+Quad ic_translate_func(Arena arena, HashTable hashtable, ASTN_Obj node) {
 
 }
 
-Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt stmt, uint32_t*  temp_counter, uint32_t* label_counter){
-    if(!stmt) return NULL;
+Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt node, uint32_t*  temp_counter, uint32_t* label_counter){
+     if(!node) return NULL;
 
-    switch (stmt -> type){
+    switch (node -> type){
         case STMT_WHILE:{
             char* label_start = ic_get_label(arena, ASTN_STMT, label_counter);
             char* label_end = ic_get_label(arena, ASTN_STMT, label_counter);
@@ -22,7 +22,7 @@ Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt stmt, uint32
             loop_start->add2 = loop_start->add3 = loop_start->add4 = NULL;
             loop_start->next = NULL;
 
-            Quad while_cond = ic_translate_expr(arena, hashtable, stmt->stmt._while.cond , temp_counter,label_counter);
+            Quad while_cond = ic_translate_expr(arena, hashtable, node->stmt._while.cond , temp_counter,label_counter);
             
             
             Quad jump_exit = (Quad)arena_alloc(arena,sizeof(struct quad));
@@ -34,7 +34,7 @@ Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt stmt, uint32
             jump_exit->add4 = NULL;
             jump_exit->next = NULL;
 
-            Quad block = ic_translate_stmt(arena , hashtable, stmt -> stmt._while.block,temp_counter,label_counter);
+            Quad block = ic_translate_stmt(arena , hashtable, node -> stmt._while.block,temp_counter,label_counter);
 
             Quad jump_back = (Quad)arena_alloc(arena,sizeof(struct quad));
             jump_back->inst = ICI_UJ_Jump;
@@ -45,7 +45,6 @@ Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt stmt, uint32
             jump_back->add4 = NULL;
             jump_back->next = NULL;
 
-            // Quádrupla para o rótulo do final do laço
             Quad loop_end = (Quad)arena_alloc(arena,sizeof(struct quad));
             loop_end->inst = ICI_Label;
             loop_end->add1.type = AT_String;
@@ -62,7 +61,7 @@ Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt stmt, uint32
             return loop_start;
         }
         case STMT_IF:{
-            Quad cond = ic_translate_expr(arena, hashtable, stmt -> stmt._if.cond , temp_counter, label_counter);
+            Quad cond = ic_translate_expr(arena, hashtable, node -> stmt._if.cond , temp_counter, label_counter);
 
             char* label_true = ic_get_label(arena , ASTN_STMT , label_counter);
             char* label_false = ic_get_label(arena , ASTN_STMT , label_counter);
@@ -76,7 +75,7 @@ Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt stmt, uint32
             jump_false -> add4 = NULL;
             jump_false -> next = NULL;
 
-            Quad block = ic_translate_stmt(arena, hashtable, stmt -> stmt._if.block,temp_counter,label_counter);
+            Quad block = ic_translate_stmt(arena, hashtable, node -> stmt._if.block,temp_counter,label_counter);
 
             Quad jump_end = (Quad)arena_alloc(arena,sizeof(struct quad));
             jump_end -> inst = ICI_UJ_JUMP;
@@ -89,128 +88,151 @@ Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt stmt, uint32
 
             Quad else_block = NULL;
 
-            if(stmt -> stmt._if.next){
-                else_block = ic_translate_stmt(arena , table , stmt -> stmt._if.next , temp_counter,label_counter);
+            if(node -> stmt._if.next){
+                else_block = ic_translate_stmt(arena , hashtable , node -> stmt._if.next , temp_counter,label_counter);
             }
 
             cond        -> next = jump_false;
             jump_false  -> next = block;
             block       -> next = jump_end;
             jump_end    -> next = else_block;
+        }
 
+        case STMT_VAR_DIRECT_ASSIGN:{
+            Quad expr = ic_translate_expr(arena , hashtable, node -> stmt._assign.value, temp_counter, label_counter);
 
+            Address var;
+            var.type = AT_UIntConst;
+            var.value.val_uint = node -> stmt._assign.var -> value.ident;
+
+            Quad stmt = (Quad)arena_alloc(arena,sizeof(struct quad));
+            stmt -> inst = ICI_DT_StoreWord;
+            stmt -> add1 = expr -> add1;
+            stmt -> add2 = NULL;
+            stmt -> add3 = var;
+            stmt -> add4 = NULL;
+            stmt -> next = NULL;
+
+            expr -> next = stmt;
+
+            return expr;
         }
     }
 }
 
-Quad ic_translate_expr (Arena arena, HashTable hashtable, ASTN_Expr expr, uint32_t* temp_counter, uint32_t* label_counter){
-    if (!expr) return NULL;
+Quad ic_translate_expr (Arena arena, HashTable hashtable, ASTN_Expr node, uint32_t* temp_counter, uint32_t* label_counter) {
+  if (node == NULL)
+    return NULL;
 
-    switch(expr -> type){
+    switch(node -> type){
         case EXPR_UN:{
-            Quad expr = ic_translate_expr(arena,hashtable,expr -> expr.unary.operand, temp_counter, label_counter);
+            Quad expr = ic_translate_expr(arena,hashtable,node -> expr.unary.operand, temp_counter, label_counter);
             uint32_t temp = ic_get_temp(hashtable, NULL, temp_counter);
             Address result;
             result -> type = AT_UIntConst;
             result -> value.val_uint = temp;
 
-            ICI op;
-            switch (expr -> expr.binary.op) {
-                case OP_UN_ARIT_PLUS:
-                    op = ICI_DT_Move;
-                    break;
-                case OP_UN_ARIT_MINUS:
-                    op = ICI_DT_Sub;
-                    break;
-                case OP_UN_LOG_NOT:
-                    op = ICI_Logic_BitOrI;
-                    break;
-            }
-            return expr;
-        }
-        case EXPR_BIN: {
-            Quad leftSide = ic_translate_expr(arena,hashtable, expr -> expr.binary.left, temp_counter, label_counter);
-            Quad rightSide = ic_translate_expr(arena,hashtable, expr -> expr.binary.right, temp_counter, label_counter);
+      ICI op;
+      switch (node->expr.binary.op) {
+        case OP_UN_ARIT_PLUS:
+          op = ICI_DT_Move;
+          break;
+        case OP_UN_ARIT_MINUS:
+          op = ICI_DT_Sub;
+          break;
+        case OP_UN_LOG_NOT:
+          op = ICI_Logic_BitOrI;
+          break;
+      }
 
-            uint32_t temp = ic_get_temp(hashtable, NULL, temp_counter);
-            Address result;
-            result -> type = AT_UIntConst;
-            result -> value.val_uint = temp;
-
-            ICI op;
-            switch (expr->expr.binary.op) {
-                case OP_BIN_ARIT_PLUS:
-                    op = ICI_Arit_AddI; 
-                    break;
-                case OP_BIN_ARIT_MINUS:
-                    op = ICI_Arit_SubI;
-                    break;
-                case OP_BIN_ARIT_MUL:
-                    op = ICI_Arit_MulI;  
-                    break;
-                case OP_BIN_ARIT_DIV:
-                    op = ICI_Arit_Div;
-                    break;
-                case OP_BIN_COMP_EQUAL:
-                    op = ICI_Cond_Equal;
-                    break;
-                case OP_BIN_COMP_NEQUAL:
-                    op = ICI_Cond_NEqual;
-                    break;
-                case OP_BIN_COMP_LTHAN:
-                    op = ICI_Cond_LThan;
-                    break;
-                case OP_BIN_COMP_GTHAN:
-                    op = ICI_Cond_GThan;
-                    break;
-                case OP_BIN_COMP_LEQUAL:
-                    op = ICI_Cond_LThanEqual;
-                    break;
-                case OP_BIN_COMP_GEQUAL:
-                    op = ICI_Cond_GThanEqual;
-                    break;
-                case OP_BIN_LOG_AND:
-                    op = ICI_Logic_BitAnd;
-                    break;
-                case OP_BIN_LOG_OR:
-                    op = ICI_Logic_BitOr;
-                    break;
+      return expr;
     }
-            Quad expr = (Quad)arena_alloc(arena,sizeof(struct quad));
-                 expr -> inst = op;
-                 expr -> add1 = leftSide -> add1;
-                 expr -> add2 = rightSide -> add2;
-                 expr -> add3 = result;
-                 expr -> add4 = NULL;
+    case EXPR_BIN: {
+      Quad leftSide  = ic_translate_expr(arena, hashtable, node->expr.binary.left, temp_counter, label_counter),
+           rightSide = ic_translate_expr(arena, hashtable, node->expr.binary.right, temp_counter, label_counter);
 
-        }
-        case EXPR_TOKEN: {
-            uint32_t temp = ic_get_temp(hashtable, NULL, temp_counter);
-            Address address;
-            address -> type = AT_UIntConst;
-            address -> value.val_uint = temp;
-            Quad expr = (Quad)arena_alloc(arena,sizeof(struct quad));
-                expr -> inst = ICI_DT_LoadImmediate;
-                expr -> add1.type = AT_String;
-                expr -> add1.value.label = strdup(expr -> expr.token -> value.ident);
-                expr -> add2 = NULL;
-                expr -> add3 = address;
-                expr -> add4 = NULL; 
-            
-            return expr;
-        }
+      uint32_t temp = ic_get_temp(hashtable, NULL, temp_counter);
+      Address result;
+      result->type = AT_UIntConst;
+      result->value.val_uint = temp;
+
+      ICI op;
+      switch (node->expr.binary.op) {
+        case OP_BIN_ARIT_PLUS:
+          op = ICI_Arit_AddI; 
+          break;
+        case OP_BIN_ARIT_MINUS:
+          op = ICI_Arit_SubI;
+          break;
+        case OP_BIN_ARIT_MUL:
+          op = ICI_Arit_MulI;  
+          break;
+        case OP_BIN_ARIT_DIV:
+          op = ICI_Arit_Div;
+          break;
+        case OP_BIN_COMP_EQUAL:
+          op = ICI_Cond_Equal;
+          break;
+        case OP_BIN_COMP_NEQUAL:
+          op = ICI_Cond_NEqual;
+          break;
+        case OP_BIN_COMP_LTHAN:
+          op = ICI_Cond_LThan;
+          break;
+        case OP_BIN_COMP_GTHAN:
+          op = ICI_Cond_GThan;
+          break;
+        case OP_BIN_COMP_LEQUAL:
+          op = ICI_Cond_LThanEqual;
+          break;
+        case OP_BIN_COMP_GEQUAL:
+          op = ICI_Cond_GThanEqual;
+          break;
+        case OP_BIN_LOG_AND:
+          op = ICI_Logic_BitAnd;
+          break;
+        case OP_BIN_LOG_OR:
+          op = ICI_Logic_BitOr;
+          break;
+      }
+
+      Quad expr = (Quad)arena_alloc(arena,sizeof(struct quad));
+      error_assert(error_mem, expr != NULL);
+      expr->inst = op;
+      expr->add1 = leftSide->add1;
+      expr->add2 = rightSide->add2;
+      expr->add3 = result;
+      expr->add4 = NULL;
+
+      return expr;
     }
+    case EXPR_TOKEN: {
+      uint32_t temp = ic_get_temp(hashtable, NULL, temp_counter);
+
+      Address address;
+      address->type = AT_UIntConst;
+      address->value.val_uint = temp;
+
+      Quad expr = (Quad)arena_alloc(arena, sizeof(struct quad));
+      error_assert(error_mem, expr != NULL);
+      expr->inst = ICI_DT_LoadImmediate;
+      expr->add1.type = AT_String;
+      expr->add1.value.label = strdup(node->expr.token->value.ident);
+      expr->add2 = NULL;
+      expr->add3 = address;
+      expr->add4 = NULL; 
+      
+      return expr;
+    }
+  }
 }
 
-
-
-
-uint32_t ic_get_temp   (HashTable hashtable, ASTN_Token token, uint32_t* temp_counter){
-    return (*temp_counter)++;
+uint32_t ic_get_temp(HashTable hashtable, ASTN_Token token, uint32_t* temp_counter) {
+  return (*temp_counter)++;
 }
 
-char*    ic_get_label  (Arena arena, ASTN_Type type, uint32_t* label_counter){
-    char* label = arena_alloc(arena, 20);  
-    sprintf(label, "L%d", (*label_counter)++); 
-    return label;
+char* ic_get_label(Arena arena, ASTN_Type type, uint32_t* label_counter) {
+  char* label = arena_alloc(arena, 20);  
+  sprintf(label, "L%d", (*label_counter)++); 
+  return label;
 }
