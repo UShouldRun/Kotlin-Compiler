@@ -131,6 +131,20 @@ void* arena_realloc(Arena arena, void* ptr, uint64_t s_realloc) {
   return new_ptr;
 }
 
+char* arena_strdup(Arena arena, char* str) {
+  if (str == NULL)
+    return NULL;
+
+  uint64_t len = strlen(str) + 1;
+  char* copy = (char*)arena_alloc(arena, len);
+  if (copy == NULL)
+    return NULL;
+
+  memcpy(copy, str, len);
+
+  return copy;
+}
+
 bool arena_is_aligned(Arena arena) {
   return arena->is_aligned;
 }

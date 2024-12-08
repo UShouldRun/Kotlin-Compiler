@@ -5,6 +5,7 @@
 
 extern const char* filename;
 
+extern YYSTYPE yylval;
 extern AST   ast;
 extern Arena arena;
 
@@ -523,29 +524,75 @@ kotlin_expression:
 
 kotlin_token:
       TT_TRUE
-      { $$ = astn_create_token(arena, TT_LIT_TRUE, NULL, filename, yylloc.first_line, yylloc.first_column, yylloc.last_column); }
+      {
+        $$ = astn_create_token(
+          arena, TT_LIT_TRUE, NULL,
+          filename, @1.first_line,
+          @1.first_column, @1.last_column
+        );
+      }
     | TT_FALSE
-      { $$ = astn_create_token(arena, TT_LIT_FALSE, NULL, filename, yylloc.first_line, yylloc.first_column, yylloc.last_column); }
+      {
+        $$ = astn_create_token(
+          arena, TT_LIT_FALSE, NULL,
+          filename, @1.first_line,
+          @1.first_column, @1.last_column
+        );
+      }
     | TT_NULL
-      { $$ = astn_create_token(arena, TT_LIT_NULL, NULL, filename, yylloc.first_line, yylloc.first_column, yylloc.last_column); } 
+      {
+        $$ = astn_create_token(
+          arena, TT_LIT_NULL, NULL,
+          filename, @1.first_line,
+          @1.first_column, @1.last_column
+        );
+      } 
     | TT_STRING_LIT
-      { $$ = astn_create_token(arena, TT_LIT_STRING, (void*)yylval.str, filename, yylloc.first_line, yylloc.first_column, yylloc.last_column); }
+      {
+        $$ = astn_create_token(
+          arena, TT_LIT_STRING, (void*)yylval.str,
+          filename, @1.first_line,
+          @1.first_column, @1.last_column
+        );
+      }
     | TT_REAL
-      { $$ = astn_create_token(arena, TT_LIT_REAL, (void*)&yylval.real, filename, yylloc.first_line, yylloc.first_column, yylloc.last_column); }
+      {
+        $$ = astn_create_token(
+          arena, TT_LIT_REAL, (void*)&yylval.real,
+          filename, @1.first_line,
+          @1.first_column, @1.last_column
+        );
+      }
     | kotlin_number
-      { $$ = $1; }
+      {
+        $$ = $1;
+      }
     | kotlin_identifier
-      { $$ = $1; }
+      {
+        $$ = $1;
+      }
     ;
 
 kotlin_number:
       TT_NUMBER
-      { $$ = astn_create_token(arena, TT_LIT_NUMBER, (void*)&yylval.num, filename, yylloc.first_line, yylloc.first_column, yylloc.last_column); }
+      {
+        $$ = astn_create_token(
+          arena, TT_LIT_NUMBER, (void*)&yylval.num,
+          filename, @1.first_line,
+          @1.first_column, @1.last_column
+        );
+      }
     ;
 
 kotlin_identifier:
       TT_IDENTIFIER
-      { $$ = astn_create_token(arena, TT_IDENT, (void*)yylval.str, filename, yylloc.first_line, yylloc.first_column, yylloc.last_column); }
+      {
+        $$ = astn_create_token(
+          arena, TT_IDENT, (void*)yylval.str,
+          filename, @1.first_line,
+          @1.first_column, @1.last_column
+        ); 
+      }
     ;
 
 kotlin_fun_call:
@@ -584,5 +631,9 @@ void yyerror(YYLTYPE* yylloc, const char* error_msg) {
   fprintf(stderr, "%s", line);
   for (int i = 1; i < yylloc->first_column; i++)
     fprintf(stderr, " ");
-  fprintf(stderr, "^\n");
+  fprintf(stderr, "%s^", colors[RED]);
+  uint32_t s_word = yylloc->first_column - yylloc->last_column;
+  for (int i = 1; i < s_word; i++)
+    fprintf(stderr, "~");
+  fprintf(stderr, "%s", colors[RESET]);
 }

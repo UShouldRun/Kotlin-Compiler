@@ -36,6 +36,6 @@ bool       stack_pop_frame            (Stack* stack, HashTable table);
 bool       stack_push                 (Stack* stack, ASTN_Token token);
 bool       stack_push_frame           (Stack* stack);
 bool       stack_is_frame             (Stack stack);
-bool       stack_free                 (Stack stack);
+bool       stack_free                 (Stack* stack);
 
 #endif // !HASH_TABLE_H

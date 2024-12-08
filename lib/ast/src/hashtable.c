@@ -157,6 +157,10 @@ bool stack_pop_frame(Stack* stack, HashTable table) {
     return false;
   while (!(*stack)->frame)
     (void)hashtable_remove_var_ktype(table, stack_pop(stack));
+  Stack node = *stack;
+  error_assert(error_unexp, node != NULL);
+  *stack = node->next;
+  free(node);
   return true;
 }
 
@@ -164,15 +168,15 @@ bool stack_is_frame(Stack stack) {
   return stack ? stack->frame : false;
 }
 
-bool stack_free(Stack stack) {
+bool stack_free(Stack* stack) {
   if (stack == NULL)
     return false;
-  Stack node = stack;
-  while (node != NULL) {
-    Stack delete = node;
-    node = node->next;
-    free(delete);
+  while (*stack != NULL) {
+    Stack node = *stack;
+    *stack = node->next;
+    free(node);
   }
+  *stack = NULL;
   return true;
 }
 

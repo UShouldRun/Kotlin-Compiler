@@ -1,12 +1,22 @@
 %{
 #include "arena.h"
 #include "parser.tab.h"
+
 extern int yylex(YYSTYPE* yylval, YYLTYPE* yylloc);
-#define YY_DECL extern int yylex (YYSTYPE* yylval, YYLTYPE* yylloc)
-/* string \"[^\"]*\" - may use this one*/
-/* "in"           { return TT_IN; } */
+extern Arena arena;
+
+#define YY_DECL extern int yylex(YYSTYPE* yylval, YYLTYPE* yylloc)
+
+uint32_t current_column = 1;
+#define YY_USER_ACTION \
+  yylloc->first_line   = yylineno; \
+  yylloc->first_column = current_column; \
+  yylloc->last_line    = yylineno; \
+  yylloc->last_column  = current_column + yyleng - 1; \
+  current_column += yyleng;
 %}
 
+%option yylineno
 %option caseless
 %option noinput nounput
 %option noyywrap
@@ -20,7 +30,7 @@ number     {digit}+
 real       ({digit}+\.{digit}?|{digit}?\.{digit}+)(e((-)?{digit}+))?
 id         {alpha}({alpha}|{digit})*
 string     \"([^\\"]|\\.)*\"
-whitespace [ \t\n\r]+
+whitespace [ \t\r]+
 comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
 
 %% 
@@ -84,13 +94,20 @@ comment    ("//".*\n|"/*"([^*]|\*+[^*/])*\*+"/")
 "."            { return TT_DOT; }
 
 {whitespace}   ;
+\n             { current_column = 1; }
 {comment}      ;
-{id}           { yylval->str = strdup(yytext);           return TT_IDENTIFIER; }
-{number_h}     { yylval->num = strtol(yytext, NULL, 16); return TT_NUMBER; }
-{number}       { yylval->num = atoi(yytext);             return TT_NUMBER; }
-{real}         { yylval->real = strtod(yytext, NULL);    return TT_REAL; }
-{string}       { yylval->str = strdup(yytext);           return TT_STRING_LIT; }
+{id}           { yylval->str  = arena_strdup(arena, yytext); return TT_IDENTIFIER; }
+{number_h}     { yylval->num  = strtol(yytext, NULL, 16);    return TT_NUMBER; }
+{number}       { yylval->num  = atoi(yytext);                return TT_NUMBER; }
+{real}         { yylval->real = strtod(yytext, NULL);        return TT_REAL; }
+{string}       { yylval->str  = arena_strdup(arena, yytext); return TT_STRING_LIT; }
 
-.              { /* Ignore any other character */ }
+.              ;
 
 %%
+
+/*
+*/
+/* string \"[^\"]*\" - may use this one*/
+/* "in"           { return TT_IN; } */
+

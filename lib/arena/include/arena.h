@@ -15,6 +15,8 @@ void*    arena_alloc(Arena arena, uint64_t s_alloc);
 void*    arena_alloc_array(Arena arena, uint64_t s_obj, uint32_t count);
 void*    arena_realloc(Arena arena, void* ptr, uint64_t s_realloc);
 
+char*    arena_strdup(Arena arena, char* str);
+
 void     arena_print(Arena arena, FILE* file);
 
 bool     arena_is_aligned(Arena arena);
