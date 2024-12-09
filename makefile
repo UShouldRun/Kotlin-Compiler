@@ -82,12 +82,12 @@ $(ZIP):
 
 # Rule to build the final binary executable
 $(TARGET): $(SRC) | error arena hashmap hashtable ast parser lexer
-	@$(CC) -Wall -o $(BINDIR)/$(TARGET) $< $(DEP)
+	@$(CC) -o $(BINDIR)/$(TARGET) $< $(DEP)
 	@echo "Built the target binary $(BINDIR)/$(TARGET)"
 
 # Rule to compile source files
 $(BUILDDIR)/$(TARGET).o: $(SRC) | error arena hashmap hashtable ast parser lexer
-	@$(CC) -Wall $(DEBUG) -o $@ $< $(DEP)
+	@$(CC) $(DEBUG) -o $@ $< $(DEP)
 	@echo "Compiled $@"
 
 $(ARENA_DIR)/build/libarena.a: $(ARENA_SRC)

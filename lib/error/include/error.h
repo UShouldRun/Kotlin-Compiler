@@ -74,8 +74,10 @@ typedef enum {
 #define ERROR_TYPE_CONFLICT_BOOL  "Type conflict (type must be bool)"
 #define ERROR_TYPE_CONFLICT_NUM   "Type conflict (type must be number)"
 #define ERROR_TYPE_CONFLICT       "Type conflict"
-#define ERROR_TYPE_FEW_ARGS       "Few arguments passed into function"
-#define ERROR_TYPE_MANY_ARGS      "Many arguments passed into function"
+#define ERROR_TYPE_FEW_ARGS       "Too few arguments passed into function"
+#define ERROR_TYPE_MANY_ARGS      "Too many arguments passed into function"
+#define ERROR_TYPE_FEW_RET        "Too few values returned by the current function"
+#define ERROR_TYPE_MANY_RET       "Too many values returned by the current function"
 
 #define ERROR_IO_SOURCE_FILE      "[ERROR]: Could not open file %s for error display.\n"
 

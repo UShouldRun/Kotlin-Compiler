@@ -14,7 +14,7 @@
 
 // AST Type Check
 bool        ast_type_check_obj             (const char*, HashTable, ASTN_Obj);
-bool        ast_type_check_stmt            (const char*, Arena, HashTable, Stack, ASTN_Stmt, ASTN_FunRet);
+bool        ast_type_check_stmt            (const char*, Arena, HashTable, Stack*, ASTN_Stmt, ASTN_FunRet);
 ASTN_KType  ast_type_check_expr            (const char*, Arena, HashTable, ASTN_Expr);
 ASTN_KType  ast_type_check_ktype_copy      (Arena, ASTN_KType);
 bool        ast_type_check_expr_is_bool    (const char*, Arena, HashTable, ASTN_Expr);
@@ -62,7 +62,7 @@ struct astn_token {
     const char* lit_str,
               * ident;
   } value;
-  uint32_t pos_abs, pos_line, pos_rel;
+  uint32_t line, start, end;
   const char* file;
 };
 
