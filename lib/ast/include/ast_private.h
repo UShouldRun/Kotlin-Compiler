@@ -15,6 +15,16 @@
 #define DEFAULT_READLN  "readln"
 #define DEFAULT_PRINTLN "println"
 #define DEFAULT_INPUT   "input"
+#define DEFAULT_ARG     "arg"
+
+#define VAR_KTYPE                  "Current variable ktype: "
+
+#define EVALUATED_KTYPE_EXPR       "Evaluated KType Expr: "
+#define EVALUATED_KTYPE_EXPR_LEFT  "Evaluated KType Expr Left: "
+#define EVALUATED_KTYPE_EXPR_RIGHT "Evaluated KType Expr Right: "
+
+#define EXPECTED_ARGS              "Expected args: "
+#define EXPECTED_KTYPE             "Expected KType: "
 
 // AST Type Check
 bool        ast_type_check_obj             (const char*, Arena, HashTable, ASTN_Obj);

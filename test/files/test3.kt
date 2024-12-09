@@ -7,14 +7,14 @@ fun main(): Int {
   when (2 + 3) {
     4 -> {
       if (cond2 && (!cond1 || cond3)) {
-        print(hello_word);
+        println(hello_word, null);
       } else {
-        print("Bye World");
+        println("Bye World", null);
       }
     }
     5 -> {
       while (!cond1 && cond2) {
-        print("Anybody Home???");
+        println("Anybody Home???", null);
         cond1 = !cond2 || cond3;
       }
     }

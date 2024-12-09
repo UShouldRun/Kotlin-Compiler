@@ -41,9 +41,14 @@ bool ast_type_check(Arena arena, AST program, const char* file, uint64_t s_bucke
     astn_create_token(arena, TT_IDENT, (void*)DEFAULT_PRINTLN, file, 0, 0, 0),
     astn_create_fun_args(
       arena,
-      astn_create_ktype(arena, true, KOTLIN_INT, NULL, 0, 0, 0, 0),
+      astn_create_ktype(arena, true, KOTLIN_STRING, NULL, 0, 0, 0, 0),
       astn_create_token(arena, TT_IDENT, (void*)DEFAULT_INPUT, file, 0, 0, 0),
-      NULL
+      astn_create_fun_args(
+        arena,
+        astn_create_ktype(arena, true, KOTLIN_INT, NULL, 0, 0, 0, 0),
+        astn_create_token(arena, TT_IDENT, (void*)DEFAULT_ARG, file, 0, 0, 0),
+        NULL
+      )
     ),
     NULL,
     NULL,
@@ -945,10 +950,10 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
             error_type_checker,
             ERROR_UNDEFINED_FUN,
             file,
-            astn_get_pos_first_line((void*)node, ASTN_STMT),
-            astn_get_pos_last_line((void*)node, ASTN_STMT),
-            astn_get_pos_first_col((void*)node, ASTN_STMT),
-            astn_get_pos_last_col((void*)node, ASTN_STMT)
+            astn_get_pos_first_line((void*)node->stmt._fun_call.fun, ASTN_TOKEN),
+            astn_get_pos_last_line((void*)node->stmt._fun_call.fun, ASTN_TOKEN),
+            astn_get_pos_first_col((void*)node->stmt._fun_call.fun, ASTN_TOKEN),
+            astn_get_pos_last_col((void*)node->stmt._fun_call.fun, ASTN_TOKEN)
           );
           type_check = false;
         } else {
@@ -968,7 +973,12 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
                 astn_get_pos_first_col((void*)fc_arg->expr, ASTN_EXPR),
                 astn_get_pos_last_col((void*)fc_arg->expr, ASTN_EXPR)
               );
+              fprintf(stderr, EVALUATED_KTYPE_EXPR);
+              ast_print_ktype(stderr, expr_type);
+              fprintf(stderr, " - ");
+              fprintf(stderr, EXPECTED_ARGS);
               ast_print_fun_decl(stderr, node_fun);
+              fprintf(stderr, "\n");
               type_check = false;
             }
 
@@ -1021,6 +1031,12 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
               astn_get_pos_first_col((void*)node_ret->expr, ASTN_EXPR),
               astn_get_pos_last_col((void*)node_ret->expr, ASTN_EXPR)
             );
+            fprintf(stderr, EVALUATED_KTYPE_EXPR);
+            ast_print_ktype(stderr, expr_type);
+            fprintf(stderr, " - ");
+            fprintf(stderr, EXPECTED_KTYPE);
+            ast_print_ktype(stderr, ret->type);
+            fprintf(stderr, "\n");
             type_check = false;
           }
 
@@ -1097,7 +1113,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         if (!(node->stmt._assign.ktype->is_default && node->stmt._assign.ktype->type._default == KOTLIN_ANY)) {
           check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
         } else {
-          node->stmt._assign.ktype = expr_ktype;
+          hashtable_insert_var_ktype(&table, node->stmt._assign.var, expr_ktype);
         }
         if (!check_expr) {
           ast_error(
@@ -1109,6 +1125,12 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
             astn_get_pos_first_col((void*)node, ASTN_STMT),
             astn_get_pos_last_col((void*)node, ASTN_STMT)
           );
+          fprintf(stderr, EVALUATED_KTYPE_EXPR);
+          ast_print_ktype(stderr, expr_ktype);
+          fprintf(stderr, " - ");
+          fprintf(stderr, EXPECTED_KTYPE);
+          ast_print_ktype(stderr, node->stmt._assign.ktype);
+          fprintf(stderr, "\n");
         }
 
         error_assert(
@@ -1140,10 +1162,10 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
           ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node->stmt._assign.value);
 
           bool check_expr = true;
-          if (!(node->stmt._assign.ktype->is_default && node->stmt._assign.ktype->type._default == KOTLIN_ANY)) {
-            check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
+          if (!(var_ktype->is_default && var_ktype->type._default == KOTLIN_ANY)) {
+            check_expr = ast_type_check_ktype_same(var_ktype, expr_ktype); 
           } else {
-            node->stmt._assign.ktype = expr_ktype;
+            hashtable_insert_var_ktype(&table, node->stmt._assign.var, expr_ktype);
           }
           if (!check_expr) {
             ast_error(
@@ -1155,6 +1177,12 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
               astn_get_pos_first_col((void*)node, ASTN_STMT),
               astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
+            fprintf(stderr, EVALUATED_KTYPE_EXPR);
+            ast_print_ktype(stderr, expr_ktype);
+            fprintf(stderr, " - ");
+            fprintf(stderr, EXPECTED_KTYPE);
+            ast_print_ktype(stderr, var_ktype);
+            fprintf(stderr, "\n");
           }
 
           type_check = type_check && check_expr;
@@ -1187,6 +1215,9 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
               astn_get_pos_first_col((void*)node, ASTN_STMT),
               astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
+            fprintf(stderr, VAR_KTYPE);
+            ast_print_ktype(stderr, var_ktype);
+            fprintf(stderr, "\n");
           }
 
           type_check = type_check && check_ktype;
@@ -1220,6 +1251,9 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
               astn_get_pos_first_col((void*)node, ASTN_STMT),
               astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
+            fprintf(stderr, VAR_KTYPE);
+            ast_print_ktype(stderr, var_ktype);
+            fprintf(stderr, "\n");
           }
           type_check = type_check && check_ktype;
 
@@ -1236,6 +1270,12 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
               astn_get_pos_first_col((void*)node, ASTN_STMT),
               astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
+            fprintf(stderr, EVALUATED_KTYPE_EXPR);
+            ast_print_ktype(stderr, expr_ktype);
+            fprintf(stderr, " - ");
+            fprintf(stderr, EXPECTED_KTYPE);
+            ast_print_ktype(stderr, var_ktype);
+            fprintf(stderr, "\n");
           }
 
           type_check = type_check && check_expr;
@@ -1366,6 +1406,9 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
               astn_get_pos_first_col((void*)node->expr.unary.operand, ASTN_EXPR),
               astn_get_pos_last_col((void*)node->expr.unary.operand, ASTN_EXPR)
             );
+            fprintf(stderr, EVALUATED_KTYPE_EXPR);
+            ast_print_ktype(stderr, un_ktype);
+            fprintf(stderr, "\n");
           } else {
             expr_ktype = un_ktype;
           }
@@ -1387,6 +1430,9 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
               astn_get_pos_first_col((void*)node->expr.unary.operand, ASTN_EXPR),
               astn_get_pos_last_col((void*)node->expr.unary.operand, ASTN_EXPR)
             );
+            fprintf(stderr, EVALUATED_KTYPE_EXPR);
+            ast_print_ktype(stderr, un_ktype);
+            fprintf(stderr, "\n");
           } else {
             expr_ktype = un_ktype;
           }
@@ -1416,6 +1462,12 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
             astn_get_pos_first_col((void*)node, ASTN_EXPR),
             astn_get_pos_last_col((void*)node, ASTN_EXPR)
           );
+          fprintf(stderr, EVALUATED_KTYPE_EXPR_LEFT);
+          ast_print_ktype(stderr, left_ktype);
+          fprintf(stderr, " - ");
+          fprintf(stderr, EVALUATED_KTYPE_EXPR_RIGHT);
+          ast_print_ktype(stderr, right_ktype);
+          fprintf(stderr, "\n");
         } else {
           expr_ktype = ast_type_check_ktype_copy(arena, left_ktype);
           error_assert(error_mem, expr_ktype != NULL);
@@ -1430,10 +1482,10 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
           error_type_checker,
           ERROR_UNDEFINED_FUN,
           file,
-          astn_get_pos_first_line((void*)node, ASTN_EXPR),
-          astn_get_pos_last_line((void*)node, ASTN_EXPR),
-          astn_get_pos_first_col((void*)node, ASTN_EXPR),
-          astn_get_pos_last_col((void*)node, ASTN_EXPR)
+          astn_get_pos_first_line((void*)node->expr.fun_call.fun, ASTN_TOKEN),
+          astn_get_pos_last_line((void*)node->expr.fun_call.fun, ASTN_TOKEN),
+          astn_get_pos_first_col((void*)node->expr.fun_call.fun, ASTN_TOKEN),
+          astn_get_pos_last_col((void*)node->expr.fun_call.fun, ASTN_TOKEN)
         );
       } else {
         ASTN_ExprList fc_arg = node->expr.fun_call.args;
@@ -1452,7 +1504,12 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
               astn_get_pos_first_col((void*)fc_arg->expr, ASTN_EXPR),
               astn_get_pos_last_col((void*)fc_arg->expr, ASTN_EXPR)
             );
+            fprintf(stderr, EVALUATED_KTYPE_EXPR);
+            ast_print_ktype(stderr, expr_type);
+            fprintf(stderr, " - ");
+            fprintf(stderr, EXPECTED_ARGS);
             ast_print_fun_decl(stderr, node_fun);
+            fprintf(stderr, "\n");
           }
 
           f_arg  = f_arg->next;
@@ -1613,18 +1670,22 @@ void ast_print_obj(FILE* file, ASTN_Obj node, int32_t indent) {
     fprintf(file, "enum ");
     ast_print_token(file, node->obj._enum.ident);
     fprintf(file, " {\n");
+
     ASTN_EnumVal node_val = node->obj._enum.values;
     while (node_val) {
       ast_print_indent(file, indent + 1, "");
       ast_print_token(file, node_val->value);
+
       fprintf(file, ", atribute: ");
       if (node_val->is_atributed)
         ast_print_token(file, node_val->atribute);
       else
         fprintf(file, "none");
       fprintf(file, "\n");
+
       node_val = node_val->next;
     }
+
     ast_print_indent(file, indent, "}\n");
   }
 }
@@ -1676,47 +1737,59 @@ void ast_print_stmt(FILE* file, ASTN_Stmt node, int32_t indent) {
       } 
       case STMT_FOR: {
         fprintf(file, "for (\n");
+
         ast_print_indent(file, indent + 1, "  init {\n");
         ast_print_stmt(file, node->stmt._for.init, indent + 2);
+
         ast_print_indent(file, indent + 1, "} cond {\n");
         ast_print_indent(file, indent + 2, "");
         ast_print_expr(file, node->stmt._for.cond);
         fprintf(file, "\n");
+
         ast_print_indent(file, indent + 1, "} incr {\n");
         ast_print_stmt(file, node->stmt._for.incr, indent + 2);
         ast_print_indent(file, indent + 1, "})\n");
+
         ast_print_indent(file, indent + 1, "  block {\n");
         ast_print_stmt(file, node->stmt._for.block, indent + 2);
         ast_print_indent(file, indent, "}");
+
         break;
       }
       case STMT_DO: {
         fprintf(file, "do {\n");
         ast_print_stmt(file, node->stmt._while.block, indent + 1);
         fprintf(file, "}\n");
+
         fprintf(file, "while (");
         ast_print_expr(file, node->stmt._while.cond);
         fprintf(file, ")\n");
+
         break;
       } 
       case STMT_IF: {
         fprintf(file, "if (");
         ast_print_expr(file, node->stmt._if.cond);
         fprintf(file, ") {\n");
+
         ast_print_stmt(file, node->stmt._if.block, indent + 1);
         ast_print_indent(file, indent, "}\n");
+
         ASTN_Stmt next = node->stmt._if.next;
         while (next) {
           ast_print_indent(file, indent, "");
           fprintf(file, "else ");
+
           if (next->type == STMT_ELSEIF) {   
             fprintf(file, "if (");
             ast_print_expr(file, next->stmt._if.cond);
             fprintf(file, ")");
           }
+
           fprintf(file, " {\n");
           ast_print_stmt(file, next->stmt._if.block, indent + 1);
           ast_print_indent(file, indent, "}\n");
+
           next = next->stmt._if.next;
         }
         break;
@@ -1725,9 +1798,11 @@ void ast_print_stmt(FILE* file, ASTN_Stmt node, int32_t indent) {
         fprintf(file, "when (");
         ast_print_expr(file, node->stmt._when.cond);
         fprintf(file, ") {\n");
+
         ASTN_Stmt cases = node->stmt._when.cases;
         while (cases) {
           ast_print_indent(file, indent + 1, "");
+
           if (cases->type == STMT_CASE) {
             fprintf(file, "(");
             ast_print_expr(file, cases->stmt._if.cond);
@@ -1737,8 +1812,10 @@ void ast_print_stmt(FILE* file, ASTN_Stmt node, int32_t indent) {
             fprintf(file, "else");
           }
           fprintf(file, " {\n");
+
           ast_print_stmt(file, cases->stmt._if.block, indent + 2);
           ast_print_indent(file, indent + 1, "}\n");
+
           cases = cases->stmt._if.next;
         }
         ast_print_indent(file, indent, "}\n");
@@ -2053,9 +2130,9 @@ void ast_error(
       for (uint32_t i = 1; i < start_column; i++)
         fprintf(stderr, " ");
 
-      fprintf(stderr, "%s", colors[RED]);
-      for (uint32_t i = start_column; i <= end_column; i++)
-        fprintf(stderr, "^");
+      fprintf(stderr, "%s^", colors[RED]);
+      for (uint32_t i = start_column + 1; i <= end_column; i++)
+        fprintf(stderr, "~");
       fprintf(stderr, "%s", colors[RESET]);
 
       fprintf(stderr, "\n");
