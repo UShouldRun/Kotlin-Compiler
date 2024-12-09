@@ -1,13 +1,11 @@
+fun fibo(n: Int): Int {
+  if (n == 0 || n == 1) {
+    return n;
+  }
+  return fibo(n - 1) + fibo(n - 2);
+}
+
 fun main() {
-  var cond: Int = scan("%d");
-  if (cond == 1) {
-    print(cond);
-  }
-  elseif (cond == 2) {
-    print(cond + 1);
-  }
-  else {
-    print(cond + 2);
-  }
-  return cond;
+  println("%d", fibo(readln()));
+  return;
 }

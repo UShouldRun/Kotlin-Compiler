@@ -32,6 +32,11 @@ int32_t main(int32_t argc, char* argv[]) {
   error_assert(error_nullptr, arena != NULL);
 
   yyparse();
+  if (ast == NULL) {
+    error_assert(error_unexp, arena_destroy(arena));
+    yylex_destroy();
+    return 1;
+  }
   ast_print(stdout, ast);
   fclose(yyin);
 

@@ -1,4 +1,4 @@
-fun main() {
+fun main(): Int {
   var x: Int = 3;
   var y: Int = 5;
   var cond: Boolean = true;

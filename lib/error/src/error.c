@@ -19,24 +19,44 @@ static const char* _error_msg[ERROR_SIZE] = {
 void _error_print(ErrorType error, const char* msg, const char* file, uint32_t line, int32_t column) {
   if (column == -1) {
     fprintf(
-      stderr, "%s[FATAL]: %s, %s%s%s at %u, in %s%s\n",
-      colors[RED], _error_msg[error],
-      colors[UNDERLINE], msg, colors[RESET],
-      line, file, colors[RESET]
+      stderr, "%s[FATAL]:%s %s, %s%s%s%s at %u, in %s\n",
+      colors[RED], _error_msg[error], colors[RESET],
+      colors[RED], colors[UNDERLINE], msg, colors[RESET],
+      line, file
     );
     return;
   }
   fprintf(
-    stderr, "%s[FATAL]: %s, %s%s%s at %u-%d, in %s%s\n",
-    colors[RED], _error_msg[error],
-    colors[UNDERLINE], msg, colors[RESET],
-    line, column, file, colors[RESET]
+    stderr, "%s[FATAL]:%s %s, %s%s%s%s at %u-%d, in %s\n",
+    colors[RED], _error_msg[error], colors[RESET],
+    colors[RED], colors[UNDERLINE], msg, colors[RESET],
+    line, column, file
   );
 }
 
 void _error_assert(ErrorType error, const char* msg, const char* file, uint32_t line) {
   _error_print(error, msg, file, line, -1);
   exit(error);
+}
+
+void error_print_kotlin(ErrorType error, const char* msg, const char* file, uint32_t line, int32_t column) {
+  if (column == -1) {
+    fprintf(
+      stderr, "%s%s:%s %s, %s%s%s%s at %u\n",
+      colors[RED], file, colors[RESET],
+      _error_msg[error],
+      colors[RED], colors[UNDERLINE], msg, colors[RESET],
+      line
+    );
+    return;
+  }
+  fprintf(
+    stderr, "%s%s:%s %s, %s%s%s%s at %u-%d\n",
+    colors[RED], file, colors[RESET],
+    _error_msg[error],
+    colors[RED], colors[UNDERLINE], msg, colors[RESET],
+    line, column
+  );
 }
 
 const char* colors[] = {

@@ -10,7 +10,7 @@ enum dimension {
   _2D(2), _3D(3)
 }
 
-fun main() {
+fun main(): Int {
   var dim2D: dimension = _2D;
   var dim3d: dimension = _3D;
 
@@ -18,7 +18,7 @@ fun main() {
   var b: Int = 30;
   var c: Int = readln();
 
-  var x: Long = 0;
+  var x: Int = 0;
   for (var count: Int = 0; count < 10; count ++) {
     x += vector_dot_mul_2d(a, b, a * b, b / a) / vector_dot_mul_3d(c, a, b, a - b, a + c, b * c);
     a += x;
@@ -26,7 +26,7 @@ fun main() {
     c += a;
   }
 
-  print(x + a);
+  println(x + a);
 
   return x - a - b / c;
 }

@@ -1,4 +1,4 @@
-fun main() {
+fun main(): Int {
   var x: Int = 4;
 
   {
