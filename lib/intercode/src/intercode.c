@@ -7,7 +7,7 @@ Quad ic_translate_func(Arena arena, HashTable hashtable, ASTN_Obj node) {
 
 }
 
-Quad ic_translate_stmt (Arena arena, HashTable hashtable, ASTN_Stmt node, uint32_t*  temp_counter, uint32_t* label_counter){
+Quad ic_translate_stmt(Arena arena, HashTable hashtable, ASTN_Stmt node, uint32_t*  temp_counter, uint32_t* label_counter) {
      if(!node) return NULL;
 
     switch (node -> type){

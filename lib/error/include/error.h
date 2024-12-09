@@ -79,6 +79,8 @@ typedef enum {
 #define ERROR_TYPE_FEW_RET        "Too few values returned by the current function"
 #define ERROR_TYPE_MANY_RET       "Too many values returned by the current function"
 
+#define ERROR_NOT_IMPLEMENT_RET   "Not implemented multiple return values in this version of the compiler"
+
 #define ERROR_IO_SOURCE_FILE      "[ERROR]: Could not open file %s for error display.\n"
 
 // ======================================# PRIVATE #==========================================

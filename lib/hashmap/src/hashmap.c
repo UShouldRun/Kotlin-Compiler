@@ -191,7 +191,7 @@ bool hashmap_remove(HashMap hashmap, char *key, void free_value(void *value)) {
       head->key   = NULL;
       head->value = NULL;
       head->next  = NULL;
-      break;
+      return true;
     }
 
     head->key   = (head->next)->key;

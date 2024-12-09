@@ -24,6 +24,35 @@ bool ast_type_check(Arena arena, AST program, const char* file, uint64_t s_bucke
   HashTable table = hashtable_create(s_buckets, load_threshold_factor);
   error_assert(error_type_checker, table != NULL);
 
+  ASTN_Obj readln = astn_create_fun(
+    arena,
+    astn_create_token(arena, TT_IDENT, (void*)DEFAULT_READLN, file, 0, 0, 0),
+    NULL,
+    astn_create_fun_ret(
+      arena,
+      astn_create_ktype(arena, true, KOTLIN_INT, NULL, 0, 0, 0, 0),
+      NULL
+    ),
+    NULL,
+    NULL
+  ),
+  println = astn_create_fun(
+    arena,
+    astn_create_token(arena, TT_IDENT, (void*)DEFAULT_PRINTLN, file, 0, 0, 0),
+    astn_create_fun_args(
+      arena,
+      astn_create_ktype(arena, true, KOTLIN_INT, NULL, 0, 0, 0, 0),
+      astn_create_token(arena, TT_IDENT, (void*)DEFAULT_INPUT, file, 0, 0, 0),
+      NULL
+    ),
+    NULL,
+    NULL,
+    NULL
+  );
+
+  ast_type_check_obj(file, arena, table, readln);
+  ast_type_check_obj(file, arena, table, println);
+
   for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
     if (node->type != ASTN_FUN)
       type_check = type_check && ast_type_check_obj(file, arena, table, node);
@@ -1064,7 +1093,12 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         }
 
         ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node->stmt._assign.value);
-        bool check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
+        bool check_expr = true;
+        if (!(node->stmt._assign.ktype->is_default && node->stmt._assign.ktype->type._default == KOTLIN_ANY)) {
+          check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
+        } else {
+          node->stmt._assign.ktype = expr_ktype;
+        }
         if (!check_expr) {
           ast_error(
             error_type_checker,
@@ -1104,8 +1138,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
           );
         } else {
           ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node->stmt._assign.value);
-          bool check_expr = ast_type_check_ktype_same(var_ktype, expr_ktype);
 
+          bool check_expr = true;
+          if (!(node->stmt._assign.ktype->is_default && node->stmt._assign.ktype->type._default == KOTLIN_ANY)) {
+            check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
+          } else {
+            node->stmt._assign.ktype = expr_ktype;
+          }
           if (!check_expr) {
             ast_error(
               error_type_checker,
@@ -1341,8 +1380,8 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
           if (!(un_ktype->is_default && un_ktype->type._default == KOTLIN_BOOLEAN)) {
             ast_error(
               error_type_checker,
-              file,
               ERROR_TYPE_CONFLICT_BOOL,
+              file,
               astn_get_pos_first_line((void*)node->expr.unary.operand, ASTN_EXPR),
               astn_get_pos_last_line((void*)node->expr.unary.operand, ASTN_EXPR),
               astn_get_pos_first_col((void*)node->expr.unary.operand, ASTN_EXPR),
@@ -1370,8 +1409,8 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
         if (!ast_type_check_ktype_same(left_ktype, right_ktype)) {
           ast_error(
             error_type_checker,
-            file,
             ERROR_TYPE_CONFLICT,
+            file,
             astn_get_pos_first_line((void*)node, ASTN_EXPR),
             astn_get_pos_last_line((void*)node, ASTN_EXPR),
             astn_get_pos_first_col((void*)node, ASTN_EXPR),
@@ -1443,6 +1482,28 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
           );
           ast_print_fun_decl(stderr, node_fun);
         }
+
+        uint32_t s_ktypes = 0;
+        for (
+          ASTN_FunRet node_fret = node_fun->obj._fun.ret;
+          node_fret != NULL;
+          s_ktypes++,
+          node_fret = node_fret->next
+        );
+        
+        if (s_ktypes > 1) {
+          ast_error(
+            error_type_checker,
+            ERROR_NOT_IMPLEMENT_RET,
+            file,
+            astn_get_pos_first_line((void*)node, ASTN_EXPR),
+            astn_get_pos_last_line((void*)node, ASTN_EXPR),
+            astn_get_pos_first_col((void*)node, ASTN_EXPR),
+            astn_get_pos_last_col((void*)node, ASTN_EXPR)
+          );
+        }
+
+        expr_ktype = node_fun->obj._fun.ret->type;
       }
 
       break;
@@ -1968,7 +2029,10 @@ void ast_error(
   ErrorType error, const char* error_msg, const char* filename,
   uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column
 ) {
-  error_print_kotlin(error, error_msg, filename, first_line, first_column);
+  error_print_kotlin(error, error_msg, filename, first_line, -1);
+
+  if (first_line == 0 && last_line == 0 && first_column == 0 && last_column == 0)
+    return;
   
   FILE* file = fopen(filename, "r");
   if (file == NULL) {

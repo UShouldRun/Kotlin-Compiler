@@ -12,6 +12,10 @@
 #include "ast.h"
 #include "hashtable.h"
 
+#define DEFAULT_READLN  "readln"
+#define DEFAULT_PRINTLN "println"
+#define DEFAULT_INPUT   "input"
+
 // AST Type Check
 bool        ast_type_check_obj             (const char*, Arena, HashTable, ASTN_Obj);
 bool        ast_type_check_stmt            (const char*, Arena, HashTable, Stack*, ASTN_Stmt, ASTN_FunRet);

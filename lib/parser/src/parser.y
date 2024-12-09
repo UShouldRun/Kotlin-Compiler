@@ -663,8 +663,8 @@ void yyerror(YYLTYPE* yylloc, const char* error_msg) {
   for (int i = 1; i < yylloc->first_column; i++)
     fprintf(stderr, " ");
   fprintf(stderr, "%s^", colors[RED]);
-  uint32_t s_word = yylloc->first_column - yylloc->last_column;
+  uint32_t s_word = yylloc->last_column - yylloc->first_column + 1;
   for (int i = 1; i < s_word; i++)
     fprintf(stderr, "~");
-  fprintf(stderr, "%s", colors[RESET]);
+  fprintf(stderr, "%s\n", colors[RESET]);
 }
