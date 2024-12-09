@@ -86,6 +86,8 @@ typedef enum {
 void _error_print(ErrorType error, const char* msg, const char* file, uint32_t line, int32_t column);
 void _error_assert(ErrorType, const char*, const char*, uint32_t);
 
+void error_print_kotlin(ErrorType error, const char* msg, const char* file, uint32_t line, int32_t column);
+
 // ======================================# PUBLIC #==========================================
 
 #define error_assert(error, condition) condition ? (void)0 : _error_assert(error, #condition, __FILE__, __LINE__)

@@ -13,7 +13,7 @@
 #include "hashtable.h"
 
 // AST Type Check
-bool        ast_type_check_obj             (const char*, HashTable, ASTN_Obj);
+bool        ast_type_check_obj             (const char*, Arena, HashTable, ASTN_Obj);
 bool        ast_type_check_stmt            (const char*, Arena, HashTable, Stack*, ASTN_Stmt, ASTN_FunRet);
 ASTN_KType  ast_type_check_expr            (const char*, Arena, HashTable, ASTN_Expr);
 ASTN_KType  ast_type_check_ktype_copy      (Arena, ASTN_KType);
@@ -23,10 +23,7 @@ bool        ast_type_check_token_equals    (ASTN_Token, ASTN_Token);
 bool        ast_type_check_ktype_is_number (ASTN_KType);
 bool        ast_type_check_ktype           (const char*, HashTable, ASTN_KType);
 
-void        ast_error                      (const char*, const char*, uint32_t, uint32_t);
-
-uint32_t    ast_get_pos_line               (void*, ASTN_Type);
-uint32_t    ast_get_pos_rel                (void*, ASTN_Type);
+void        ast_error                      (ErrorType, const char*, const char*, uint32_t, uint32_t, uint32_t, uint32_t);
 
 // AST Print
 void        ast_print_obj                  (FILE*, ASTN_Obj, int32_t);
@@ -49,6 +46,8 @@ struct astn_ktype {
     ASTN_Token        _defined;
     ASTN_KTypeDefault _default;
   } type;
+  uint32_t first_line, last_line,
+           first_column, last_column;
 };
 
 // AST TOKEN
@@ -70,6 +69,8 @@ struct astn_token {
 struct astn_expr_list {
   ASTN_Expr     expr;
   ASTN_ExprList next;
+  uint32_t first_line, last_line,
+           first_column, last_column;
 };
 
 struct astn_expr {
@@ -89,6 +90,8 @@ struct astn_expr {
       ASTN_Expr   left, right;
     } binary;
   } expr;
+  uint32_t first_line, last_line,
+           first_column, last_column;
 };
 
 // AST STATEMENTS
@@ -129,17 +132,23 @@ struct astn_stmt {
     ASTN_Stmt block;
   } stmt;
   ASTN_Stmt next;
+  uint32_t first_line, last_line,
+           first_column, last_column;
 };
 
 struct astn_fun_arg {
   ASTN_KType  type;
   ASTN_Token  arg;
   ASTN_FunArg next;
+  uint32_t first_line, last_line,
+           first_column, last_column;
 };
 
 struct astn_fun_ret {
   ASTN_KType  type;
   ASTN_FunRet next;
+  uint32_t first_line, last_line,
+           first_column, last_column;
 };
 
 // AST OBJECTS
@@ -148,6 +157,8 @@ struct astn_enum_val {
   ASTN_Token   atribute;
   ASTN_Token   value;
   ASTN_EnumVal next;
+  uint32_t first_line, last_line,
+           first_column, last_column;
 };
 
 struct astn_obj {
@@ -164,6 +175,8 @@ struct astn_obj {
       ASTN_EnumVal values;
     } _enum;
   } obj;
+  uint32_t first_line, last_line,
+           first_column, last_column;
   ASTN_Obj next;
 };
 

@@ -26,10 +26,10 @@ bool ast_type_check(Arena arena, AST program, const char* file, uint64_t s_bucke
 
   for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
     if (node->type != ASTN_FUN)
-      type_check = type_check && ast_type_check_obj(file, table, node);
+      type_check = type_check && ast_type_check_obj(file, arena, table, node);
   for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
     if (node->type == ASTN_FUN)
-      type_check = type_check && ast_type_check_obj(file, table, node);
+      type_check = type_check && ast_type_check_obj(file, arena, table, node);
   for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
     if (node->type == ASTN_FUN) {
       Stack stack = stack_create();
@@ -65,6 +65,157 @@ uint64_t astn_max_size() {
   return max;
 }
 
+// AST Node Get Position
+
+uint32_t astn_get_pos_first_line(void* ptr, ASTN_Type type) {
+  if (ptr == NULL)
+    return 0;
+
+  switch (type) {
+    case ASTN_TOKEN:
+    case ASTN_VAR:       { return ((ASTN_Token)ptr)->line; }
+    case ASTN_KTYPE:     { return ((ASTN_KType)ptr)->first_line; }
+    case ASTN_EXPR:      { return ((ASTN_Expr)ptr)->first_line; }
+    case ASTN_EXPR_LIST: { return ((ASTN_ExprList)ptr)->first_line; }
+    case ASTN_STMT:      { return ((ASTN_Stmt)ptr)->first_line; }
+    case ASTN_FUN_ARG:   { return ((ASTN_FunArg)ptr)->first_line; }
+    case ASTN_FUN_RET:   { return ((ASTN_FunRet)ptr)->first_line; }
+    case ASTN_ENUM_VAL:  { return ((ASTN_EnumVal)ptr)->first_line;}
+    case ASTN_FUN:
+    case ASTN_ENUM:      { return ((ASTN_Obj)ptr)->first_line; }
+    default:             { return 0; }
+  }
+}
+
+uint32_t astn_get_pos_last_line(void* ptr, ASTN_Type type) {
+  if (ptr == NULL)
+    return 0;
+
+  switch (type) {
+    case ASTN_TOKEN:
+    case ASTN_VAR:       { return ((ASTN_Token)ptr)->line; }
+    case ASTN_KTYPE:     { return ((ASTN_KType)ptr)->last_line; }
+    case ASTN_EXPR:      { return ((ASTN_Expr)ptr)->last_line; }
+    case ASTN_EXPR_LIST: { return ((ASTN_ExprList)ptr)->last_line; }
+    case ASTN_STMT:      { return ((ASTN_Stmt)ptr)->last_line; }
+    case ASTN_FUN_ARG:   { return ((ASTN_FunArg)ptr)->last_line; }
+    case ASTN_FUN_RET:   { return ((ASTN_FunRet)ptr)->last_line; }
+    case ASTN_ENUM_VAL:  { return ((ASTN_EnumVal)ptr)->last_line;}
+    case ASTN_FUN:
+    case ASTN_ENUM:      { return ((ASTN_Obj)ptr)->last_line; }
+    default:             { return 0; }
+  }
+}
+
+uint32_t astn_get_pos_first_col(void* ptr, ASTN_Type type) {
+  if (ptr == NULL)
+    return 0;
+
+  switch (type) {
+    case ASTN_TOKEN:
+    case ASTN_VAR:       { return ((ASTN_Token)ptr)->start; }
+    case ASTN_KTYPE:     { return ((ASTN_KType)ptr)->first_column; }
+    case ASTN_EXPR:      { return ((ASTN_Expr)ptr)->first_column; }
+    case ASTN_EXPR_LIST: { return ((ASTN_ExprList)ptr)->first_column; }
+    case ASTN_STMT:      { return ((ASTN_Stmt)ptr)->first_column; }
+    case ASTN_FUN_ARG:   { return ((ASTN_FunArg)ptr)->first_column; }
+    case ASTN_FUN_RET:   { return ((ASTN_FunRet)ptr)->first_column; }
+    case ASTN_ENUM_VAL:  { return ((ASTN_EnumVal)ptr)->first_column;}
+    case ASTN_FUN:
+    case ASTN_ENUM:      { return ((ASTN_Obj)ptr)->first_column; }
+    default:             { return 0; }
+  }
+}
+
+uint32_t astn_get_pos_last_col(void* ptr, ASTN_Type type)  {
+  if (ptr == NULL)
+    return 0;
+
+  switch (type) {
+    case ASTN_TOKEN:
+    case ASTN_VAR:       { return ((ASTN_Token)ptr)->end; }
+    case ASTN_KTYPE:     { return ((ASTN_KType)ptr)->last_column; }
+    case ASTN_EXPR:      { return ((ASTN_Expr)ptr)->last_column; }
+    case ASTN_EXPR_LIST: { return ((ASTN_ExprList)ptr)->last_column; }
+    case ASTN_STMT:      { return ((ASTN_Stmt)ptr)->last_column; }
+    case ASTN_FUN_ARG:   { return ((ASTN_FunArg)ptr)->last_column; }
+    case ASTN_FUN_RET:   { return ((ASTN_FunRet)ptr)->last_column; }
+    case ASTN_ENUM_VAL:  { return ((ASTN_EnumVal)ptr)->last_column;}
+    case ASTN_FUN:
+    case ASTN_ENUM:      { return ((ASTN_Obj)ptr)->last_column; }
+    default:             { return 0; }
+  }
+}
+
+// AST Node Set Position
+
+void astn_set_pos_obj(ASTN_Obj node, uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column) {
+  if (node == NULL)
+    return;
+  node->first_line   = first_line;
+  node->last_line    = last_line;
+  node->first_column = first_column;
+  node->last_column  = last_column;
+}
+
+void astn_set_pos_enum_val(ASTN_EnumVal node, uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column) {
+  if (node == NULL)
+    return;
+  node->first_line   = first_line;
+  node->last_line    = last_line;
+  node->first_column = first_column;
+  node->last_column  = last_column;
+}
+
+void astn_set_pos_fun_arg(ASTN_FunArg node, uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column) {
+  if (node == NULL)
+    return;
+  node->first_line   = first_line;
+  node->last_line    = last_line;
+  node->first_column = first_column;
+  node->last_column  = last_column;
+
+}
+
+void astn_set_pos_fun_ret(ASTN_FunRet node, uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column) {
+  if (node == NULL)
+    return;
+  node->first_line   = first_line;
+  node->last_line    = last_line;
+  node->first_column = first_column;
+  node->last_column  = last_column;
+
+}
+
+void astn_set_pos_stmt(ASTN_Stmt node, uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column) {
+  if (node == NULL)
+    return;
+  node->first_line   = first_line;
+  node->last_line    = last_line;
+  node->first_column = first_column;
+  node->last_column  = last_column;
+}
+
+void astn_set_pos_expr(ASTN_Expr node, uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column) {
+  if (node == NULL)
+    return;
+  node->first_line   = first_line;
+  node->last_line    = last_line;
+  node->first_column = first_column;
+  node->last_column  = last_column;
+}
+
+void astn_set_pos_expr_list(ASTN_ExprList node, uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column) {
+  if (node == NULL)
+    return;
+  node->first_line   = first_line;
+  node->last_line    = last_line;
+  node->first_column = first_column;
+  node->last_column  = last_column;
+}
+
+// AST Node Creation
+
 AST ast_create(Arena arena, const char* name, ASTN_Obj objects) {
   error_assert(error_nullptr, arena != NULL);
   AST program = (AST)arena_alloc(arena, sizeof(struct astn_program));
@@ -78,30 +229,47 @@ AST ast_create(Arena arena, const char* name, ASTN_Obj objects) {
 ASTN_Obj astn_create_enum(Arena arena, ASTN_Token ident, ASTN_EnumVal values, ASTN_Obj next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, ident != NULL);
+
   ASTN_Obj node = (ASTN_Obj)arena_alloc(arena, sizeof(struct astn_obj));
   error_assert(error_mem, node != NULL);
   node->type             = ASTN_ENUM;
   node->obj._enum.ident  = ident;
   node->obj._enum.values = values;
   node->next             = next;
+
+  astn_set_pos_obj(node, ident->line, ident->line, ident->start, ident->end);
+
   return node;
 }
 
 ASTN_EnumVal astn_create_enum_val(Arena arena, ASTN_Token value, ASTN_Token atribute, bool is_atributed, ASTN_EnumVal next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, value != NULL);
+
   ASTN_EnumVal node = (ASTN_EnumVal)arena_alloc(arena, sizeof(struct astn_enum_val));
   error_assert(error_mem, node != NULL);
   node->is_atributed = is_atributed;
   node->atribute     = atribute;
   node->value        = value;
   node->next         = next;
+
+  ASTN_EnumVal last = node;
+  for (; last != NULL && last->next != NULL; last = last->next);
+  astn_set_pos_enum_val(
+    node,
+    value->line,
+    last ? last->last_line : (atribute ? atribute->line : value->line),
+    value->start,
+    last ? last->last_column : (atribute ? atribute->end : value->end)
+  );
+
   return node;
 }
 
 ASTN_Obj astn_create_fun(Arena arena, ASTN_Token ident, ASTN_FunArg args, ASTN_FunRet ret, ASTN_Stmt body, ASTN_Obj next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, ident != NULL);
+
   ASTN_Obj node = (ASTN_Obj)arena_alloc(arena, sizeof(struct astn_obj));
   error_assert(error_mem, node != NULL);
   node->type           = ASTN_FUN;
@@ -110,6 +278,9 @@ ASTN_Obj astn_create_fun(Arena arena, ASTN_Token ident, ASTN_FunArg args, ASTN_F
   node->obj._fun.ret   = ret;
   node->obj._fun.body  = body;
   node->next           = next;
+
+  astn_set_pos_obj(node, ident->line, ident->line, ident->start, ident->end);
+
   return node;
 }
 
@@ -117,39 +288,108 @@ ASTN_FunArg astn_create_fun_args(Arena arena, ASTN_KType type, ASTN_Token arg, A
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, type != NULL);
   error_assert(error_nullptr, arg != NULL);
+
   ASTN_FunArg node = (ASTN_FunArg)arena_alloc(arena, sizeof(struct astn_fun_arg));
   error_assert(error_mem, node != NULL);
   node->type = type;
-  node->arg  = arg;
+  node->arg  = arg; 
   node->next = next;
+
+  ASTN_FunArg last = node;
+  for (; last != NULL && last->next != NULL; last = last->next);
+  astn_set_pos_fun_arg(
+    node,
+    type->first_line,
+    last ? last->last_line : arg->line,
+    type->first_column,
+    last ? last->last_column : arg->end
+  );
+
   return node;
 }
 
 ASTN_FunRet astn_create_fun_ret(Arena arena, ASTN_KType type, ASTN_FunRet next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, type != NULL);
+
   ASTN_FunRet node = (ASTN_FunRet)arena_alloc(arena, sizeof(struct astn_fun_ret));
   error_assert(error_mem, node != NULL);
   node->type = type;
   node->next = next;
+
+  ASTN_FunRet last = node;
+  for (; last != NULL && last->next != NULL; last = last->next);
+  astn_set_pos_fun_ret(
+    node,
+    type->first_line,
+    last ? last->last_line : type->first_line,
+    type->first_column,
+    last ? last->last_column : type->last_column
+  );
+
   return node;
 }
 
 ASTN_Stmt astn_create_stmt_while(Arena arena, bool do_while, ASTN_Expr cond, ASTN_Stmt block, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
-  error_assert(error_nullptr, cond != NULL);
+
+  if (cond == NULL)
+    return astn_create_stmt_block(arena, block, next);
+
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type              = do_while ? STMT_DO : STMT_WHILE;
   node->stmt._while.cond  = cond;
   node->stmt._while.block = block;
   node->next              = next;
+
+  ASTN_Stmt last = block;
+  for (; last != NULL && last->next != NULL; last = last->next);
+
+  uint32_t block_first_line   = block ? block->first_line : cond->first_line,
+           block_last_line    = block ? block->last_line : cond->last_line,
+           block_first_column = block ? block->first_column : cond->first_column,
+           block_last_column  = block ? block->last_column : cond->last_column;
+
+  astn_set_pos_stmt(
+    node,
+    do_while ? block_first_line : cond->first_line,
+    do_while ? cond->last_line : block_last_line,
+    do_while ? block_first_column : cond->first_column,
+    do_while ? cond->last_column : block_last_column
+  );
+
   return node;
 }
 
 ASTN_Stmt astn_create_stmt_for(Arena arena, ASTN_Stmt init, ASTN_Expr cond, ASTN_Stmt incr, ASTN_Stmt block, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
-  error_assert(error_nullptr, cond != NULL);
+
+  if (cond == NULL) {
+    ASTN_Stmt node = init;
+    if (init != NULL) {
+      for (; node->next != NULL; node = node->next);
+      node->next = block;
+    }
+    node = block;
+    if (block != NULL) {
+      for (; node->next != NULL; node = node->next);
+      node->next = incr;
+    }
+    node = init ? init : (block ? block : incr);
+    if (node == NULL)
+      return next;
+    return astn_create_stmt_block(arena, node, next);
+  }
+  if (incr == NULL) {
+    ASTN_Stmt node = init;
+    if (init != NULL) {
+      for (; node->next != NULL; node = node->next);
+      node->next = block;
+    }
+    return astn_create_stmt_while(arena, false, cond, init, next);
+  }
+
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type            = STMT_FOR;
@@ -158,12 +398,28 @@ ASTN_Stmt astn_create_stmt_for(Arena arena, ASTN_Stmt init, ASTN_Expr cond, ASTN
   node->stmt._for.incr  = incr;
   node->stmt._for.block = block;
   node->next            = next;
+
+  ASTN_Stmt last = block ? block : incr;
+  for (; last->next != NULL; last = last->next);
+
+  astn_set_pos_stmt(
+    node,
+    init ? init->first_line : cond->first_line,
+    last->last_line,
+    init ? init->first_column : cond->first_column,
+    last->last_column
+  );
+
   return node;
 }
 
 ASTN_Stmt astn_create_stmt_if(Arena arena, ASTN_StmtType type, ASTN_Expr cond, ASTN_Stmt block, ASTN_Stmt elseif, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_unexp, type == STMT_IF || type == STMT_ELSEIF || type == STMT_ELSE || type == STMT_CASE);
+  error_assert(error_unexp, type == STMT_ELSE || cond != NULL);
+  if (cond == NULL && block == NULL)
+    return NULL;
+
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type           = type;
@@ -171,40 +427,91 @@ ASTN_Stmt astn_create_stmt_if(Arena arena, ASTN_StmtType type, ASTN_Expr cond, A
   node->stmt._if.block = block;
   node->stmt._if.next  = type == STMT_ELSE ? NULL : elseif;
   node->next           = next;
+
+  ASTN_Stmt last = block;
+  for (; last != NULL && last->next != NULL; last = last->next);
+
+  astn_set_pos_stmt(
+    node,
+    cond ? cond->first_line : block->first_line,
+    last ? last->last_line : cond->last_line,
+    cond ? cond->first_column : block->first_column,
+    last ? last->last_column : cond->last_column
+  );
+
   return node;
 }
 
 ASTN_Stmt astn_create_stmt_when(Arena arena, ASTN_Expr cond, ASTN_Stmt cases, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, cond != NULL);
+
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type             = STMT_WHEN;
   node->stmt._when.cond  = cond;
   node->stmt._when.cases = cases;
   node->next             = next;
+
+  ASTN_Stmt last = cases;
+  for (; last != NULL && last->next != NULL; last = last->next);
+
+  astn_set_pos_stmt(
+    node,
+    cond->first_line,
+    last ? last->last_line : cond->last_line,
+    cond->first_column,
+    last ? last->last_column : cond->last_column
+  );
+
   return node;
 }
 
-ASTN_Stmt astn_create_stmt_ret(Arena arena, ASTN_ExprList value) {
+ASTN_Stmt astn_create_stmt_ret(Arena arena, ASTN_ExprList value, uint32_t first_line) {
   error_assert(error_nullptr, arena != NULL);
+
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type            = STMT_RETURN;
   node->stmt._ret.value = value;
   node->next            = NULL;
+
+  ASTN_ExprList last = value;
+  for (; last != NULL && last->next != NULL; last = last->next);
+
+  astn_set_pos_stmt(
+    node,
+    first_line,
+    last ? last->last_line : first_line,
+    value ? value->first_column : 0,
+    last ? last->last_column : 0
+  );
+
   return node;
 }
 
 ASTN_Stmt astn_create_stmt_fcall(Arena arena, ASTN_Token fun, ASTN_ExprList args, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, fun != NULL);
+
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type                = STMT_FUN_CALL;
   node->next                = next;
   node->stmt._fun_call.args = args;
   node->stmt._fun_call.fun  = fun;
+
+  ASTN_ExprList last = args;
+  for (; last != NULL && last->next != NULL; last = last->next);
+
+  astn_set_pos_stmt(
+    node,
+    fun->line,
+    last ? last->last_line : fun->line,
+    fun->start,
+    last ? last->last_column : fun->end
+  );
+
   return node;
 }
 
@@ -217,6 +524,7 @@ ASTN_Stmt astn_create_stmt_assign(Arena arena, ASTN_StmtType type, ASTN_Token va
     type == STMT_VAR_EQUALS_PLUS || type == STMT_VAR_EQUALS_MINUS || type == STMT_VAR_EQUALS_MUL ||  type == STMT_VAR_EQUALS_DIV ||
     type == STMT_VAR_DIRECT_ASSIGN || type == STMT_VAR_DECL || type == STMT_VAR_DECL_ASSIGN
   );
+
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type              = type;
@@ -224,70 +532,150 @@ ASTN_Stmt astn_create_stmt_assign(Arena arena, ASTN_StmtType type, ASTN_Token va
   node->stmt._assign.var   = var;
   node->stmt._assign.ktype = ktype; 
   node->stmt._assign.value = value;
+
+  astn_set_pos_stmt(
+    node,
+    var->line,
+    value ? value->last_line : var->line,
+    var->start,
+    value ? value->last_column : var->end
+  );
+
   return node;
 }
 
 ASTN_Stmt astn_create_stmt_block(Arena arena, ASTN_Stmt block, ASTN_Stmt next) {
   error_assert(error_nullptr, arena != NULL);
+  if (block == NULL)
+    return next;
+
   ASTN_Stmt node = (ASTN_Stmt)arena_alloc(arena, sizeof(struct astn_stmt));
   error_assert(error_mem, node != NULL);
   node->type       = STMT_BLOCK;
   node->stmt.block = block;
   node->next       = next;
+
+  ASTN_Stmt last = block;
+  for (; last->next != NULL; last = last->next);
+
+  astn_set_pos_stmt(
+    node,
+    block->first_line,
+    last->last_line,
+    block->first_column,
+    last->last_column
+  );
+
   return node;
 }
 
 ASTN_Expr astn_create_expr_bin(Arena arena, ASTN_ExprOp op, ASTN_Expr left, ASTN_Expr right) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_unexp, op >= OP_BIN_ARIT_PLUS);
+
   ASTN_Expr node = (ASTN_Expr)arena_alloc(arena, sizeof(struct astn_expr));
   error_assert(error_mem, node != NULL);
   node->type              = EXPR_BIN;
   node->expr.binary.op    = op; 
   node->expr.binary.left  = left;
   node->expr.binary.right = right;
+
+  astn_set_pos_expr(
+    node,
+    left->first_line,
+    right->last_line,
+    left->first_column,
+    right->last_column
+  );
+
   return node;
 }
 
 ASTN_Expr astn_create_expr_un(Arena arena, ASTN_ExprOp op, ASTN_Expr operand) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_unexp, op > OP_NONE && op <= OP_UN_PAREN);
+
   ASTN_Expr node = (ASTN_Expr)arena_alloc(arena, sizeof(struct astn_expr));
   error_assert(error_mem, node != NULL);
   node->type               = EXPR_UN;
   node->expr.unary.op      = op; 
   node->expr.unary.operand = operand;
+
+  astn_set_pos_expr(
+    node,
+    operand->first_line,
+    operand->last_line,
+    operand->first_column,
+    operand->last_column
+  );
+
   return node;
 }
 
 ASTN_Expr astn_create_expr_fcall(Arena arena, ASTN_Token fun, ASTN_ExprList args) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, fun != NULL);
+
   ASTN_Expr node = (ASTN_Expr)arena_alloc(arena, sizeof(struct astn_expr));
   error_assert(error_mem, node != NULL);
   node->type = EXPR_FUN_CALL;
   node->expr.fun_call.fun  = fun;
   node->expr.fun_call.args = args;
+
+  ASTN_ExprList last = args;
+  for (; last != NULL && last->next != NULL; last = last->next);
+
+  astn_set_pos_expr(
+    node,
+    fun->line,
+    last ? last->last_line : fun->line,
+    fun->start,
+    last ? last->last_column : fun->end
+  );
+
   return node;
 }
 
 ASTN_Expr astn_create_expr_token(Arena arena, ASTN_Token token) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, token != NULL);
+
   ASTN_Expr node = (ASTN_Expr)arena_alloc(arena, sizeof(struct astn_expr));
   error_assert(error_mem, node != NULL);
   node->type       = EXPR_TOKEN;
   node->expr.token = token;
+
+  astn_set_pos_expr(
+    node,
+    token->line,
+    token->line,
+    token->start,
+    token->end
+  );
+
   return node;
 }
 
 ASTN_ExprList astn_create_expr_list(Arena arena, ASTN_Expr expr, ASTN_ExprList next) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_nullptr, expr != NULL);
+
   ASTN_ExprList node = (ASTN_ExprList)arena_alloc(arena, sizeof(struct astn_expr_list));
   error_assert(error_mem, node != NULL);
   node->expr = expr;
   node->next = next;
+
+  ASTN_ExprList last = next;
+  for (; last != NULL && last->next != NULL; last = last->next);
+
+  astn_set_pos_expr_list(
+    node,
+    expr->first_line,
+    last ? last->last_line : expr->last_line,
+    expr->first_column,
+    last ? last->last_column : expr->last_column
+  );
+
   return node;
 }
 
@@ -296,6 +684,7 @@ ASTN_Token astn_create_token(
   const char* file, uint32_t line, uint32_t start, uint32_t end
 ) {
   error_assert(error_nullptr, arena != NULL);
+
   ASTN_Token node = (ASTN_Token)arena_alloc(arena, sizeof(struct astn_token));
   error_assert(error_mem, node != NULL);
   node->type  = type;
@@ -303,6 +692,7 @@ ASTN_Token astn_create_token(
   node->line  = line;
   node->start = start;
   node->end   = end;
+
   switch (type) { 
     case TT_IDENT:      node->value.ident      = (const char*)value; break;
     case TT_LIT_STRING: node->value.lit_str    = (const char*)value; break;
@@ -313,24 +703,34 @@ ASTN_Token astn_create_token(
     case TT_LIT_NULL:   node->value.lit_null   = true;               break;
     default:            error_panic(error_unexp, ERROR_INVALID_TT);
   }
+
   return node;
 }
 
-ASTN_KType astn_create_ktype(Arena arena, bool is_default, ASTN_KTypeDefault _default, ASTN_Token _defined) {
+ASTN_KType astn_create_ktype(
+  Arena arena, bool is_default, ASTN_KTypeDefault _default, ASTN_Token _defined,
+  uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column
+) {
   error_assert(error_nullptr, arena != NULL);
   error_assert(error_unexp, is_default || _defined != NULL);
+
   ASTN_KType node = (ASTN_KType)arena_alloc(arena, sizeof(struct astn_ktype));
   error_assert(error_mem, node != NULL);
   node->is_default = is_default;
   if (is_default) node->type._default = _default;
   else            node->type._defined = _defined;
+  node->first_line   = first_line;
+  node->last_line    = last_line;
+  node->first_column = first_column;
+  node->last_column  = last_column;
+
   return node;
 }
 
 // =======================================# PRIVATE #==========================================
 
 // AST Type Check
-bool ast_type_check_obj(const char* file, HashTable table, ASTN_Obj node) {
+bool ast_type_check_obj(const char* file, Arena arena, HashTable table, ASTN_Obj node) {
   error_assert(error_type_checker, file != NULL);
   error_assert(error_type_checker, table != NULL);
   error_assert(error_type_checker, node != NULL);
@@ -358,8 +758,8 @@ bool ast_type_check_obj(const char* file, HashTable table, ASTN_Obj node) {
       for (
         ASTN_FunRet node_ret = node->obj._fun.ret;
         node_ret != NULL;
-        node_ret = node_ret->next,
-        type_check = type_check && ast_type_check_ktype(file, table, node_ret->type)
+        type_check = type_check && ast_type_check_ktype(file, table, node_ret->type),
+        node_ret = node_ret->next
       );
 
       break;
@@ -369,6 +769,12 @@ bool ast_type_check_obj(const char* file, HashTable table, ASTN_Obj node) {
         error_type_checker,
         hashtable_insert_obj(&table, node->obj._enum.ident, node)
       );
+
+      ASTN_KType ktype_enum = astn_create_ktype(
+        arena, false, KOTLIN_NOT_DEFAULT, node->obj._enum.ident,
+        node->first_line, node->last_line, node->first_column, node->last_column
+      );
+      error_assert(error_mem, ktype_enum != NULL);
 
       int32_t i = 0;
       for (
@@ -384,7 +790,7 @@ bool ast_type_check_obj(const char* file, HashTable table, ASTN_Obj node) {
         }
         error_assert(
           error_type_checker,
-          hashtable_insert_global(&table, node_value->value, node_value->atribute)
+          hashtable_insert_var_ktype(&table, node_value->value, ktype_enum)
         );
       }
 
@@ -507,10 +913,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         ASTN_Obj node_fun = hashtable_lookup_obj(table, node->stmt._fun_call.fun);
         if (node_fun == NULL) {
           ast_error(
+            error_type_checker,
             ERROR_UNDEFINED_FUN,
             file,
-            ast_get_pos_line((void*)node, ASTN_STMT),
-            ast_get_pos_rel((void*)node, ASTN_STMT)
+            astn_get_pos_first_line((void*)node, ASTN_STMT),
+            astn_get_pos_last_line((void*)node, ASTN_STMT),
+            astn_get_pos_first_col((void*)node, ASTN_STMT),
+            astn_get_pos_last_col((void*)node, ASTN_STMT)
           );
           type_check = false;
         } else {
@@ -522,10 +931,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
             if (!ast_type_check_ktype_same(f_arg->type, expr_type)) {
               ast_error(
+                error_type_checker,
                 ERROR_TYPE_CONFLICT,
                 file,
-                ast_get_pos_line((void*)fc_arg->expr, ASTN_EXPR),
-                ast_get_pos_rel((void*)fc_arg->expr, ASTN_EXPR)
+                astn_get_pos_first_line((void*)fc_arg->expr, ASTN_EXPR),
+                astn_get_pos_last_line((void*)fc_arg->expr, ASTN_EXPR),
+                astn_get_pos_first_col((void*)fc_arg->expr, ASTN_EXPR),
+                astn_get_pos_last_col((void*)fc_arg->expr, ASTN_EXPR)
               );
               ast_print_fun_decl(stderr, node_fun);
               type_check = false;
@@ -537,19 +949,25 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
           if (f_arg != NULL && fc_arg == NULL) {
             ast_error(
+              error_type_checker,
               ERROR_TYPE_FEW_ARGS,
               file,
-              ast_get_pos_line((void*)node, ASTN_STMT),
-              ast_get_pos_rel((void*)node, ASTN_STMT)
+              astn_get_pos_first_line((void*)node, ASTN_STMT),
+              astn_get_pos_last_line((void*)node, ASTN_STMT),
+              astn_get_pos_first_col((void*)node, ASTN_STMT),
+              astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
             ast_print_fun_decl(stderr, node_fun);
             type_check = false;
           } else if (f_arg == NULL && fc_arg != NULL) {
             ast_error(
+              error_type_checker,
               ERROR_TYPE_MANY_ARGS,
               file,
-              ast_get_pos_line((void*)fc_arg, ASTN_EXPR),
-              ast_get_pos_rel((void*)fc_arg, ASTN_EXPR)
+              astn_get_pos_first_line((void*)fc_arg, ASTN_EXPR_LIST),
+              astn_get_pos_last_line((void*)fc_arg, ASTN_EXPR_LIST),
+              astn_get_pos_first_col((void*)fc_arg, ASTN_EXPR_LIST),
+              astn_get_pos_last_col((void*)fc_arg, ASTN_EXPR_LIST)
             );
             ast_print_fun_decl(stderr, node_fun);
             type_check = false;
@@ -566,10 +984,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
           if (!ast_type_check_ktype_same(ret->type, expr_type)) {
             ast_error(
+              error_type_checker,
               ERROR_TYPE_CONFLICT,
               file,
-              ast_get_pos_line((void*)node_ret->expr, ASTN_EXPR),
-              ast_get_pos_rel((void*)node_ret->expr, ASTN_EXPR)
+              astn_get_pos_first_line((void*)node_ret->expr, ASTN_EXPR),
+              astn_get_pos_last_line((void*)node_ret->expr, ASTN_EXPR),
+              astn_get_pos_first_col((void*)node_ret->expr, ASTN_EXPR),
+              astn_get_pos_last_col((void*)node_ret->expr, ASTN_EXPR)
             );
             type_check = false;
           }
@@ -580,18 +1001,24 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
         if (ret != NULL && node_ret == NULL) {
           ast_error(
+            error_type_checker,
             ERROR_TYPE_FEW_RET,
             file,
-            ast_get_pos_line((void*)node, ASTN_STMT),
-            ast_get_pos_rel((void*)node, ASTN_STMT)
+            astn_get_pos_first_line((void*)node, ASTN_STMT),
+            astn_get_pos_last_line((void*)node, ASTN_STMT),
+            astn_get_pos_first_col((void*)node, ASTN_STMT),
+            astn_get_pos_last_col((void*)node, ASTN_STMT)
           );
           type_check = false;
         } else if (ret == NULL && node_ret != NULL) {
           ast_error(
+            error_type_checker,
             ERROR_TYPE_MANY_RET,
             file,
-            ast_get_pos_line((void*)node_ret->expr, ASTN_EXPR),
-            ast_get_pos_rel((void*)node_ret->expr, ASTN_EXPR)
+            astn_get_pos_first_line((void*)node_ret->expr, ASTN_EXPR),
+            astn_get_pos_last_line((void*)node_ret->expr, ASTN_EXPR),
+            astn_get_pos_first_col((void*)node_ret->expr, ASTN_EXPR),
+            astn_get_pos_last_col((void*)node_ret->expr, ASTN_EXPR)
           );
           type_check = false;
         }
@@ -601,10 +1028,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
       case STMT_VAR_DECL: {
         if (!ast_type_check_ktype(file, table, node->stmt._assign.ktype)) {
           ast_error(
+            error_type_checker,
             ERROR_UNDEFINED_KTYPE,
             file,
-            ast_get_pos_line((void*)node->stmt._assign.ktype->type._defined->value.ident, ASTN_TOKEN),
-            ast_get_pos_rel((void*)node->stmt._assign.ktype->type._defined->value.ident, ASTN_TOKEN)
+            astn_get_pos_first_line((void*)node->stmt._assign.ktype, ASTN_KTYPE),
+            astn_get_pos_last_line((void*)node->stmt._assign.ktype, ASTN_KTYPE),
+            astn_get_pos_first_col((void*)node->stmt._assign.ktype, ASTN_KTYPE),
+            astn_get_pos_last_col((void*)node->stmt._assign.ktype, ASTN_KTYPE)
           );
           type_check = false;
         }
@@ -622,12 +1052,29 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
       case STMT_VAR_DECL_ASSIGN: {
         if (!ast_type_check_ktype(file, table, node->stmt._assign.ktype)) {
           ast_error(
+            error_type_checker,
             ERROR_UNDEFINED_KTYPE,
             file,
-            ast_get_pos_line((void*)node->stmt._assign.ktype->type._defined->value.ident, ASTN_TOKEN),
-            ast_get_pos_rel((void*)node->stmt._assign.ktype->type._defined->value.ident, ASTN_TOKEN)
+            astn_get_pos_first_line((void*)node->stmt._assign.ktype, ASTN_KTYPE),
+            astn_get_pos_last_line((void*)node->stmt._assign.ktype, ASTN_KTYPE),
+            astn_get_pos_first_col((void*)node->stmt._assign.ktype, ASTN_KTYPE),
+            astn_get_pos_last_col((void*)node->stmt._assign.ktype, ASTN_KTYPE)
           );
           type_check = false;
+        }
+
+        ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node->stmt._assign.value);
+        bool check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
+        if (!check_expr) {
+          ast_error(
+            error_type_checker,
+            ERROR_TYPE_CONFLICT,
+            file,
+            astn_get_pos_first_line((void*)node, ASTN_STMT),
+            astn_get_pos_last_line((void*)node, ASTN_STMT),
+            astn_get_pos_first_col((void*)node, ASTN_STMT),
+            astn_get_pos_last_col((void*)node, ASTN_STMT)
+          );
         }
 
         error_assert(
@@ -639,17 +1086,6 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
           stack_push(stack, node->stmt._assign.var)
         );
 
-        ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node->stmt._assign.value);
-        bool check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
-        if (!check_expr) {
-          ast_error(
-            ERROR_TYPE_CONFLICT,
-            file,
-            ast_get_pos_line((void*)node, ASTN_STMT),
-            ast_get_pos_rel((void*)node, ASTN_STMT)
-          );
-        }
-
         type_check = type_check && check_expr;
         break;
       }
@@ -658,10 +1094,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
         if (var_ktype == NULL) {
           ast_error(
+            error_type_checker,
             ERROR_UNDEFINED_IDENT,
             file,
-            ast_get_pos_line((void*)node->stmt._assign.var, ASTN_TOKEN),
-            ast_get_pos_rel((void*)node->stmt._assign.var, ASTN_TOKEN)
+            astn_get_pos_first_line((void*)node->stmt._assign.var, ASTN_TOKEN),
+            astn_get_pos_last_line((void*)node->stmt._assign.var, ASTN_TOKEN),
+            astn_get_pos_first_col((void*)node->stmt._assign.var, ASTN_TOKEN),
+            astn_get_pos_last_col((void*)node->stmt._assign.var, ASTN_TOKEN)
           );
         } else {
           ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node->stmt._assign.value);
@@ -669,10 +1108,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
           if (!check_expr) {
             ast_error(
+              error_type_checker,
               ERROR_TYPE_CONFLICT,
               file,
-              ast_get_pos_line((void*)node, ASTN_STMT),
-              ast_get_pos_rel((void*)node, ASTN_STMT)
+              astn_get_pos_first_line((void*)node, ASTN_STMT),
+              astn_get_pos_last_line((void*)node, ASTN_STMT),
+              astn_get_pos_first_col((void*)node, ASTN_STMT),
+              astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
           }
 
@@ -685,20 +1127,26 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         ASTN_KType var_ktype = hashtable_lookup_var_ktype(table, node->stmt._assign.var);
         if (var_ktype == NULL) {
           ast_error(
+            error_type_checker,
             ERROR_UNDEFINED_IDENT,
             file,
-            ast_get_pos_line((void*)node->stmt._assign.var, ASTN_TOKEN),
-            ast_get_pos_rel((void*)node->stmt._assign.var, ASTN_TOKEN)
+            astn_get_pos_first_line((void*)node->stmt._assign.var, ASTN_TOKEN),
+            astn_get_pos_last_line((void*)node->stmt._assign.var, ASTN_TOKEN),
+            astn_get_pos_first_col((void*)node->stmt._assign.var, ASTN_TOKEN),
+            astn_get_pos_last_col((void*)node->stmt._assign.var, ASTN_TOKEN)
           );
         } else {
           bool check_ktype = ast_type_check_ktype_is_number(var_ktype);
 
           if (!check_ktype) {
             ast_error(
+              error_type_checker,
               ERROR_TYPE_CONFLICT_NUM,
               file,
-              ast_get_pos_line((void*)node, ASTN_STMT),
-              ast_get_pos_rel((void*)node, ASTN_STMT)
+              astn_get_pos_first_line((void*)node, ASTN_STMT),
+              astn_get_pos_last_line((void*)node, ASTN_STMT),
+              astn_get_pos_first_col((void*)node, ASTN_STMT),
+              astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
           }
 
@@ -712,20 +1160,26 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         ASTN_KType var_ktype = hashtable_lookup_var_ktype(table, node->stmt._assign.var);
         if (var_ktype == NULL) {
           ast_error(
+            error_type_checker,
             ERROR_UNDEFINED_IDENT,
             file,
-            ast_get_pos_line((void*)node->stmt._assign.var, ASTN_TOKEN),
-            ast_get_pos_rel((void*)node->stmt._assign.var, ASTN_TOKEN)
+            astn_get_pos_first_line((void*)node, ASTN_STMT),
+            astn_get_pos_last_line((void*)node, ASTN_STMT),
+            astn_get_pos_first_col((void*)node, ASTN_STMT),
+            astn_get_pos_last_col((void*)node, ASTN_STMT)
           );
         } else {
           bool check_ktype = ast_type_check_ktype_is_number(var_ktype);
 
           if (!check_ktype) {
             ast_error(
+              error_type_checker,
               ERROR_TYPE_CONFLICT_NUM,
               file,
-              ast_get_pos_line((void*)node, ASTN_STMT),
-              ast_get_pos_rel((void*)node, ASTN_STMT)
+              astn_get_pos_first_line((void*)node, ASTN_STMT),
+              astn_get_pos_last_line((void*)node, ASTN_STMT),
+              astn_get_pos_first_col((void*)node, ASTN_STMT),
+              astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
           }
           type_check = type_check && check_ktype;
@@ -735,10 +1189,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
           if (!check_expr) {
             ast_error(
+              error_type_checker,
               ERROR_TYPE_CONFLICT,
               file,
-              ast_get_pos_line((void*)node, ASTN_STMT),
-              ast_get_pos_rel((void*)node, ASTN_STMT)
+              astn_get_pos_first_line((void*)node, ASTN_STMT),
+              astn_get_pos_last_line((void*)node, ASTN_STMT),
+              astn_get_pos_first_col((void*)node, ASTN_STMT),
+              astn_get_pos_last_col((void*)node, ASTN_STMT)
             );
           }
 
@@ -749,19 +1206,25 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
       }
       case STMT_ELSEIF: case STMT_ELSE: {
         ast_error(
+          error_parser,
           ERROR_SYNTAX_ELSEIF_ELSE,
           file,
-          ast_get_pos_line((void*)node, ASTN_STMT),
-          ast_get_pos_rel((void*)node, ASTN_STMT)
+          astn_get_pos_first_line((void*)node, ASTN_STMT),
+          astn_get_pos_last_line((void*)node, ASTN_STMT),
+          astn_get_pos_first_col((void*)node, ASTN_STMT),
+          astn_get_pos_last_col((void*)node, ASTN_STMT)
         );
         break;
       }
       case STMT_CASE: {
         ast_error(
+          error_parser,
           ERROR_SYNTAX_CASE,
           file,
-          ast_get_pos_line((void*)node, ASTN_STMT),
-          ast_get_pos_rel((void*)node, ASTN_STMT)
+          astn_get_pos_first_line((void*)node, ASTN_STMT),
+          astn_get_pos_last_line((void*)node, ASTN_STMT),
+          astn_get_pos_first_col((void*)node, ASTN_STMT),
+          astn_get_pos_last_col((void*)node, ASTN_STMT)
         );
         break;
       }
@@ -832,10 +1295,13 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
 
       if (token_ktype == NULL) {
         ast_error(
+          error_type_checker,
           ERROR_UNDEFINED_IDENT,
           file,
-          ast_get_pos_line((void*)token, ASTN_TOKEN),
-          ast_get_pos_rel((void*)token, ASTN_TOKEN)
+          astn_get_pos_first_line((void*)token, ASTN_TOKEN),
+          astn_get_pos_last_line((void*)token, ASTN_TOKEN),
+          astn_get_pos_first_col((void*)token, ASTN_TOKEN),
+          astn_get_pos_last_col((void*)token, ASTN_TOKEN)
         );
       } else {
         expr_ktype = ast_type_check_ktype_copy(arena, token_ktype);;
@@ -853,10 +1319,13 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
 
           if (!(un_ktype->is_default && ast_type_check_ktype_is_number(un_ktype))) {
             ast_error(
+              error_type_checker,
               file,
               ERROR_TYPE_CONFLICT_NUM,
-              ast_get_pos_line((void*)node, ASTN_EXPR),
-              ast_get_pos_rel((void*)node, ASTN_EXPR)
+              astn_get_pos_first_line((void*)node->expr.unary.operand, ASTN_EXPR),
+              astn_get_pos_last_line((void*)node->expr.unary.operand, ASTN_EXPR),
+              astn_get_pos_first_col((void*)node->expr.unary.operand, ASTN_EXPR),
+              astn_get_pos_last_col((void*)node->expr.unary.operand, ASTN_EXPR)
             );
           } else {
             expr_ktype = un_ktype;
@@ -871,10 +1340,13 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
 
           if (!(un_ktype->is_default && un_ktype->type._default == KOTLIN_BOOLEAN)) {
             ast_error(
+              error_type_checker,
               file,
               ERROR_TYPE_CONFLICT_BOOL,
-              ast_get_pos_line((void*)node, ASTN_EXPR),
-              ast_get_pos_rel((void*)node, ASTN_EXPR)
+              astn_get_pos_first_line((void*)node->expr.unary.operand, ASTN_EXPR),
+              astn_get_pos_last_line((void*)node->expr.unary.operand, ASTN_EXPR),
+              astn_get_pos_first_col((void*)node->expr.unary.operand, ASTN_EXPR),
+              astn_get_pos_last_col((void*)node->expr.unary.operand, ASTN_EXPR)
             );
           } else {
             expr_ktype = un_ktype;
@@ -897,10 +1369,13 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
       if (left_ktype != NULL && right_ktype != NULL) {
         if (!ast_type_check_ktype_same(left_ktype, right_ktype)) {
           ast_error(
+            error_type_checker,
             file,
             ERROR_TYPE_CONFLICT,
-            ast_get_pos_line((void*)node, ASTN_EXPR),
-            ast_get_pos_rel((void*)node, ASTN_EXPR)
+            astn_get_pos_first_line((void*)node, ASTN_EXPR),
+            astn_get_pos_last_line((void*)node, ASTN_EXPR),
+            astn_get_pos_first_col((void*)node, ASTN_EXPR),
+            astn_get_pos_last_col((void*)node, ASTN_EXPR)
           );
         } else {
           expr_ktype = ast_type_check_ktype_copy(arena, left_ktype);
@@ -913,10 +1388,13 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
       ASTN_Obj node_fun = hashtable_lookup_obj(table, node->expr.fun_call.fun);
       if (node_fun == NULL) {
         ast_error(
+          error_type_checker,
           ERROR_UNDEFINED_FUN,
           file,
-          ast_get_pos_line((void*)node, ASTN_EXPR),
-          ast_get_pos_rel((void*)node, ASTN_EXPR)
+          astn_get_pos_first_line((void*)node, ASTN_EXPR),
+          astn_get_pos_last_line((void*)node, ASTN_EXPR),
+          astn_get_pos_first_col((void*)node, ASTN_EXPR),
+          astn_get_pos_last_col((void*)node, ASTN_EXPR)
         );
       } else {
         ASTN_ExprList fc_arg = node->expr.fun_call.args;
@@ -927,10 +1405,13 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
 
           if (!ast_type_check_ktype_same(f_arg->type, expr_type)) {
             ast_error(
+              error_type_checker,
               ERROR_TYPE_CONFLICT,
               file,
-              ast_get_pos_line((void*)fc_arg->expr, ASTN_EXPR),
-              ast_get_pos_rel((void*)fc_arg->expr, ASTN_EXPR)
+              astn_get_pos_first_line((void*)fc_arg->expr, ASTN_EXPR),
+              astn_get_pos_last_line((void*)fc_arg->expr, ASTN_EXPR),
+              astn_get_pos_first_col((void*)fc_arg->expr, ASTN_EXPR),
+              astn_get_pos_last_col((void*)fc_arg->expr, ASTN_EXPR)
             );
             ast_print_fun_decl(stderr, node_fun);
           }
@@ -941,18 +1422,24 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
 
         if (f_arg != NULL && fc_arg == NULL) {
           ast_error(
+            error_type_checker,
             ERROR_TYPE_FEW_ARGS,
             file,
-            ast_get_pos_line((void*)node, ASTN_EXPR),
-            ast_get_pos_rel((void*)node, ASTN_EXPR)
+            astn_get_pos_first_line((void*)node, ASTN_EXPR),
+            astn_get_pos_last_line((void*)node, ASTN_EXPR),
+            astn_get_pos_first_col((void*)node, ASTN_EXPR),
+            astn_get_pos_last_col((void*)node, ASTN_EXPR)
           );
           ast_print_fun_decl(stderr, node_fun);
         } else if (f_arg == NULL && fc_arg != NULL) {
           ast_error(
+            error_type_checker,
             ERROR_TYPE_MANY_ARGS,
             file,
-            ast_get_pos_line((void*)fc_arg, ASTN_EXPR),
-            ast_get_pos_rel((void*)fc_arg, ASTN_EXPR)
+            astn_get_pos_first_line((void*)fc_arg->expr, ASTN_EXPR),
+            astn_get_pos_last_line((void*)fc_arg->expr, ASTN_EXPR),
+            astn_get_pos_first_col((void*)fc_arg->expr, ASTN_EXPR),
+            astn_get_pos_last_col((void*)fc_arg->expr, ASTN_EXPR)
           );
           ast_print_fun_decl(stderr, node_fun);
         }
@@ -1044,86 +1531,10 @@ bool ast_type_check_ktype(const char* file, HashTable table, ASTN_KType ktype) {
   error_assert(error_type_checker, file != NULL); 
   error_assert(error_type_checker, table != NULL);
   error_assert(error_type_checker, ktype != NULL);
-  return ktype->is_default || hashtable_lookup_global(table, ktype->type._defined) != NULL;
-}
-
-uint32_t ast_get_pos_line(void* node, ASTN_Type type) {
-  error_assert(error_nullptr, node != NULL);
-
-  switch (type) {
-    case ASTN_TOKEN: { return ((ASTN_Token)node)->line; }
-    case ASTN_EXPR: {
-      ASTN_Expr node_expr = (ASTN_Expr)node;
-      switch (node_expr->type) {
-        case EXPR_TOKEN:    { return ast_get_pos_line((void*)(node_expr->expr.token), ASTN_TOKEN); }
-        case EXPR_UN:       { return ast_get_pos_line((void*)(node_expr->expr.unary.operand), ASTN_EXPR); }
-        case EXPR_BIN:      { return ast_get_pos_line((void*)(node_expr->expr.binary.left), ASTN_EXPR); }
-        case EXPR_FUN_CALL: { return ast_get_pos_line((void*)(node_expr->expr.fun_call.fun), ASTN_TOKEN); }
-        default:            { error_panic(error_type_checker, ERROR_INVALID_EXPR); }
-      }
-      break;
-    }
-    case ASTN_STMT: {
-      ASTN_Stmt node_stmt = (ASTN_Stmt)node;
-      switch (node_stmt->type) {
-        case STMT_IF: case STMT_ELSEIF: case STMT_ELSE: case STMT_CASE: {
-          return ast_get_pos_line((void*)(node_stmt->stmt._if.cond), ASTN_EXPR);
-        }
-        case STMT_DO: case STMT_WHILE: {
-          return ast_get_pos_line((void*)(node_stmt->stmt._while.cond), ASTN_EXPR);
-        }
-        case STMT_FOR: {
-          return ast_get_pos_line((void*)(node_stmt->stmt._for.cond), ASTN_EXPR);
-        }
-        case STMT_WHEN: {
-          return ast_get_pos_line((void*)(node_stmt->stmt._when.cond), ASTN_EXPR);
-        }
-        case STMT_BLOCK: {
-          return ast_get_pos_line((void*)(node_stmt->stmt.block), ASTN_STMT);
-        }
-        case STMT_RETURN: {
-          return ast_get_pos_line((void*)(node_stmt->stmt._ret.value->expr), ASTN_EXPR);
-        }
-        case STMT_FUN_CALL: {
-          return ast_get_pos_line((void*)(node_stmt->stmt._fun_call.fun), ASTN_TOKEN);
-        }
-        case STMT_VAR_DECL: case STMT_VAR_DECL_ASSIGN: case STMT_VAR_DIRECT_ASSIGN:
-        case STMT_VAR_INCR_AFTER:  case STMT_VAR_DECR_AFTER:
-        case STMT_VAR_INCR_BEFORE: case STMT_VAR_DECR_BEFORE:
-        case STMT_VAR_EQUALS_PLUS: case STMT_VAR_EQUALS_MINUS:
-        case STMT_VAR_EQUALS_MUL:  case STMT_VAR_EQUALS_DIV: {
-          return ast_get_pos_line((void*)(node_stmt->stmt._assign.var), ASTN_TOKEN);
-        }
-        default: {
-          error_panic(error_type_checker, ERROR_INVALID_STMT);
-        }
-      }
-      break;
-    }
-    default: {
-      error_panic(error_type_checker, ERROR_INVALID_ASTNT);
-    }
-  }
-
-  return 1;
-}
-
-uint32_t ast_get_pos_rel(void* node, ASTN_Type type) {
-  error_assert(error_nullptr, node != NULL);
-
-  switch (type) {
-    case ASTN_TOKEN: {
-      return ((ASTN_Token)node)->start;
-    }
-    case ASTN_EXPR: case ASTN_STMT: {
-      return 0;
-    }
-    default: {
-      error_panic(error_type_checker, ERROR_INVALID_ASTNT);
-    }
-  }
-
-  return 0;
+  if (ktype->is_default)
+    return true;
+  ASTN_Obj node = hashtable_lookup_obj(table, ktype->type._defined);
+  return node != NULL && node->type != ASTN_FUN;
 }
 
 // AST Print
@@ -1553,22 +1964,45 @@ const char* ast_match_ktype_default(ASTN_KTypeDefault ktype) {
   return NULL;
 }
 
-void ast_error(const char* error_msg, const char* filename, uint32_t pos_line, uint32_t pos_rel) {
-  _error_print(error_parser, error_msg, filename, pos_line, pos_rel);
+void ast_error(
+  ErrorType error, const char* error_msg, const char* filename,
+  uint32_t first_line, uint32_t last_line, uint32_t first_column, uint32_t last_column
+) {
+  error_print_kotlin(error, error_msg, filename, first_line, first_column);
+  
   FILE* file = fopen(filename, "r");
   if (file == NULL) {
     fprintf(stderr, ERROR_IO_SOURCE_FILE, filename);
     return;
   }
+
   char line[1024];
-  for (
-    int current_line = 1;
-    fgets(line, sizeof(line), file) && current_line != pos_line;
-    current_line++
-  );
+  uint32_t current_line = 1;
+
+  while (fgets(line, sizeof(line), file)) {
+    if (current_line >= first_line && current_line <= last_line) {
+      fprintf(stderr, "%s", line);
+
+      uint32_t start_column = (current_line == first_line) ? first_column : 1;
+      uint32_t end_column = (current_line == last_line) ? last_column : strlen(line);
+      
+      for (uint32_t i = 1; i < start_column; i++)
+        fprintf(stderr, " ");
+
+      fprintf(stderr, "%s", colors[RED]);
+      for (uint32_t i = start_column; i <= end_column; i++)
+        fprintf(stderr, "^");
+      fprintf(stderr, "%s", colors[RESET]);
+
+      fprintf(stderr, "\n");
+    }
+
+    if (current_line > last_line)
+      break;
+
+    current_line++;
+  }
+
   fclose(file);
-  fprintf(stderr, "%s", line);
-  for (int i = 1; i < pos_rel; i++)
-    fprintf(stderr, " ");
-  fprintf(stderr, "^\n");
 }
+

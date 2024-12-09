@@ -13,8 +13,9 @@ uint64_t hashtable_size(HashTable table) {
 ASTN_KType hashtable_lookup_var_ktype(HashTable table, ASTN_Token token) {
   if (!table) return NULL;
   if (!token) return NULL;
-  HT_Value value = (HT_Value)hashmap_get(table, (char*)token->value.ident);
-  error_assert(error_type_checker, value->type == ASTN_TOKEN);
+  HT_Value value = (HT_Value)hashmap_get(table, (char*)(token->value.ident));
+  if (value == NULL) return NULL;
+  error_assert(error_type_checker, value->type == ASTN_KTYPE);
   ASTN_KType node = (ASTN_KType)value->node;
   return node;
 }
@@ -22,17 +23,19 @@ ASTN_KType hashtable_lookup_var_ktype(HashTable table, ASTN_Token token) {
 ASTN_KType hashtable_remove_var_ktype(HashTable table, ASTN_Token token) {
   if (!table) return NULL;
   if (!token) return NULL;
-  HT_Value value = (HT_Value)hashmap_get(table, (char*)token->value.ident); 
-  error_assert(error_type_checker, value->type == ASTN_TOKEN);
+  HT_Value value = (HT_Value)hashmap_get(table, (char*)(token->value.ident)); 
+  if (value == NULL) return NULL;
+  error_assert(error_type_checker, value->type == ASTN_KTYPE);
   ASTN_KType node = (ASTN_KType)value->node;
-  error_assert(error_type_checker, hashmap_remove(table, (char*)token->value.ident, NULL));
+  error_assert(error_type_checker, hashmap_remove(table, (char*)(token->value.ident), NULL));
   return node;
 }
 
 ASTN_Obj hashtable_lookup_obj(HashTable table, ASTN_Token token) {
   if (!table) return NULL;
   if (!token) return NULL;
-  HT_Value value = (HT_Value)hashmap_get(table, (char*)token->value.ident); 
+  HT_Value value = (HT_Value)hashmap_get(table, (char*)(token->value.ident)); 
+  if (value == NULL) return NULL;
   error_assert(error_type_checker, value->type == ASTN_FUN || value->type == ASTN_ENUM);
   ASTN_Obj node = (ASTN_Obj)value->node;
   return node;
@@ -41,18 +44,20 @@ ASTN_Obj hashtable_lookup_obj(HashTable table, ASTN_Token token) {
 ASTN_Obj hashtable_remove_obj(HashTable table, ASTN_Token token) {
   if (!table) return NULL;
   if (!token) return NULL;
-  HT_Value value = (HT_Value)hashmap_get(table, (char*)token->value.ident); 
+  HT_Value value = (HT_Value)hashmap_get(table, (char*)(token->value.ident)); 
+  if (value == NULL) return NULL;
   error_assert(error_type_checker, value->type == ASTN_FUN || value->type == ASTN_ENUM);
   ASTN_Obj node = (ASTN_Obj)value->node;
-  error_assert(error_type_checker, hashmap_remove(table, (char*)token->value.ident, NULL));
+  error_assert(error_type_checker, hashmap_remove(table, (char*)(token->value.ident), NULL));
   return node;
 }
 
 ASTN_Token hashtable_lookup_global(HashTable table, ASTN_Token token) {
   if (!table) return NULL;
   if (!token) return NULL;
-  HT_Value value = (HT_Value)hashmap_get(table, (char*)token->value.ident); 
-  error_assert(error_type_checker, value->type == ASTN_VAR);
+  HT_Value value = (HT_Value)hashmap_get(table, (char*)(token->value.ident)); 
+  if (value == NULL) return NULL;
+  error_assert(error_type_checker, value->type == ASTN_TOKEN);
   ASTN_Token node = (ASTN_Token)value->node;
   return node;
 }
@@ -60,10 +65,11 @@ ASTN_Token hashtable_lookup_global(HashTable table, ASTN_Token token) {
 ASTN_Token hashtable_remove_global(HashTable table, ASTN_Token token) {
   if (!table) return NULL;
   if (!token) return NULL;
-  HT_Value value = (HT_Value)hashmap_get(table, (char*)token->value.ident); 
-  error_assert(error_type_checker, value->type == ASTN_VAR);
+  HT_Value value = (HT_Value)hashmap_get(table, (char*)(token->value.ident)); 
+  if (value == NULL) return NULL;
+  error_assert(error_type_checker, value->type == ASTN_TOKEN);
   ASTN_Token node = (ASTN_Token)value->node;
-  error_assert(error_type_checker, hashmap_remove(table, (char*)token->value.ident, NULL));
+  error_assert(error_type_checker, hashmap_remove(table, (char*)(token->value.ident), NULL));
   return node;
 }
 
@@ -73,9 +79,9 @@ bool hashtable_insert_var_ktype(HashTable* table, ASTN_Token token, ASTN_KType k
   if (!ktype) return false;
   HT_Value value = (HT_Value)malloc(sizeof(struct hashtable_value));
   error_assert(error_mem, value != NULL);
-  value->type = ASTN_TOKEN;
+  value->type = ASTN_KTYPE;
   value->node = (void*)ktype;
-  return hashmap_insert(table, (char*)token->value.ident, (void*)value, NULL);
+  return hashmap_insert(table, (char*)(token->value.ident), (void*)value, NULL);
 }
 
 bool hashtable_insert_obj(HashTable* table, ASTN_Token token, ASTN_Obj obj) {
@@ -86,7 +92,7 @@ bool hashtable_insert_obj(HashTable* table, ASTN_Token token, ASTN_Obj obj) {
   error_assert(error_mem, value != NULL);
   value->type = obj->type;
   value->node = (void*)obj;
-  return hashmap_insert(table, (char*)token->value.ident, (void*)value, NULL);
+  return hashmap_insert(table, (char*)(token->value.ident), (void*)value, NULL);
 }
 
 bool hashtable_insert_global(HashTable* table, ASTN_Token token, ASTN_Token global) {
@@ -95,13 +101,13 @@ bool hashtable_insert_global(HashTable* table, ASTN_Token token, ASTN_Token glob
   if (!global) return false;
   HT_Value value = (HT_Value)malloc(sizeof(struct hashtable_value));
   error_assert(error_mem, value != NULL);
-  value->type = ASTN_VAR;
+  value->type = ASTN_TOKEN;
   value->node = (void*)global;
-  return hashmap_insert(table, (char*)token->value.ident, (void*)value, NULL);
+  return hashmap_insert(table, (char*)(token->value.ident), (void*)value, NULL);
 }
 
 bool hashtable_exists_token(HashTable table, ASTN_Token token) {
-  return hashmap_exists(table, (char*)token->value.ident);
+  return hashmap_exists(table, (char*)(token->value.ident));
 }
 
 bool hashtable_free(HashTable table) {

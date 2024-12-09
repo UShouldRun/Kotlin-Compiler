@@ -5,7 +5,8 @@
 
 extern const char* filename;
 
-extern YYSTYPE yylval;
+// extern YYSTYPE yylval;
+extern int yylineno, yyleng, current_column;
 extern AST   ast;
 extern Arena arena;
 
@@ -165,9 +166,31 @@ kotlin_return_type_list:
 
 kotlin_type:
     kotlin_type_default
-    { $$ = astn_create_ktype(arena, true, $1, NULL); }
+    {
+      $$ = astn_create_ktype(
+        arena,
+        true,
+        $1,
+        NULL,
+        @1.first_line,
+        @1.last_line,
+        @1.first_column,
+        @1.last_column
+      );
+    }
   | kotlin_identifier
-    { $$ = astn_create_ktype(arena, false, KOTLIN_NOT_DEFAULT, $1); }
+    {
+      $$ = astn_create_ktype(
+        arena,
+        false,
+        KOTLIN_NOT_DEFAULT,
+        $1,
+        @1.first_line,
+        @1.last_line,
+        @1.first_column,
+        @1.last_column
+      );
+    }
   ;
 
 kotlin_type_default:
@@ -393,6 +416,7 @@ kotlin_if:
     { $$ = astn_create_stmt_if(arena, STMT_IF, $3, NULL, $7, $8); }
   | TT_IF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE TT_RBRACE kotlin_stmt
     { $$ = $7; }
+  /*
   | TT_IF TT_LPAREN TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_elseif_else kotlin_stmt
     { $$ = astn_create_stmt_if(arena, STMT_IF, NULL, $5, $7, $8); }
   | TT_IF TT_LPAREN TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_stmt
@@ -401,13 +425,15 @@ kotlin_if:
     { $$ = astn_create_stmt_if(arena, STMT_IF, NULL, NULL, $6, $7); }
   | TT_IF TT_LPAREN TT_RPAREN TT_LBRACE TT_RBRACE kotlin_stmt
     { $$ = $6; }
-
+  */
+  
   | TT_IF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_elseif_else
     { $$ = astn_create_stmt_if(arena, STMT_IF, $3, $6, $8, NULL); }
   | TT_IF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE
     { $$ = astn_create_stmt_if(arena, STMT_IF, $3, $6, NULL, NULL); }
   | TT_IF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE TT_RBRACE kotlin_elseif_else
     { $$ = astn_create_stmt_if(arena, STMT_IF, $3, NULL, $7, NULL); }
+  /*
   | TT_IF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE TT_RBRACE
     { $$ = NULL; }
   | TT_IF TT_LPAREN TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_elseif_else
@@ -418,29 +444,34 @@ kotlin_if:
     { $$ = astn_create_stmt_if(arena, STMT_IF, NULL, NULL, $6, NULL); }
   | TT_IF TT_LPAREN TT_RPAREN TT_LBRACE TT_RBRACE
     { $$ = NULL; }
+  */
   ;
 
 kotlin_elseif_else:
     TT_ELSEIF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_elseif_else
     { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, $3, $6, $8, NULL); }
-  | TT_ELSEIF TT_LPAREN TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_elseif_else
-    { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, NULL, $5, $7, NULL); }
   | TT_ELSEIF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE TT_RBRACE kotlin_elseif_else
     { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, $3, NULL, $7, NULL); }
+  /*
+  | TT_ELSEIF TT_LPAREN TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE kotlin_elseif_else
+    { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, NULL, $5, $7, NULL); }
   | TT_ELSEIF TT_LPAREN TT_RPAREN TT_LBRACE TT_RBRACE kotlin_elseif_else
     { $$ = $6; }
+  */
   | TT_ELSEIF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE
     { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, $3, $6, NULL, NULL); }
-  | TT_ELSEIF TT_LPAREN TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE
-    { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, NULL, $5, NULL, NULL); }
   | TT_ELSEIF TT_LPAREN kotlin_expression TT_RPAREN TT_LBRACE TT_RBRACE
     { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, $3, NULL, NULL, NULL); }
+  /*
+  | TT_ELSEIF TT_LPAREN TT_RPAREN TT_LBRACE kotlin_stmt TT_RBRACE
+    { $$ = astn_create_stmt_if(arena, STMT_ELSEIF, NULL, $5, NULL, NULL); }
   | TT_ELSEIF TT_LPAREN TT_RPAREN TT_LBRACE TT_RBRACE
     { $$ = NULL; }
-  | TT_ELSE TT_LBRACE kotlin_stmt TT_RBRACE
-    { $$ = astn_create_stmt_if(arena, STMT_ELSE, NULL, $3, NULL, NULL); }
   | TT_ELSE TT_LBRACE TT_RBRACE
     { $$ = NULL; }
+  */
+  | TT_ELSE TT_LBRACE kotlin_stmt TT_RBRACE
+    { $$ = astn_create_stmt_if(arena, STMT_ELSE, NULL, $3, NULL, NULL); }
   ;
 
 kotlin_when:
@@ -471,9 +502,9 @@ kotlin_when_branch:
 
 kotlin_return:
       TT_RETURN kotlin_expression_list TT_SEMICOLON
-      { $$ = astn_create_stmt_ret(arena, $2); }
+      { $$ = astn_create_stmt_ret(arena, $2, yylineno); }
     | TT_RETURN TT_SEMICOLON
-      { $$ = astn_create_stmt_ret(arena, NULL); }
+      { $$ = astn_create_stmt_ret(arena, NULL, yylineno); }
     ;
 
 kotlin_expression:
@@ -614,7 +645,7 @@ kotlin_expression_list:
 void yyerror(YYLTYPE* yylloc, const char* error_msg) {
   error_assert(error_unexp, yylloc != NULL);
 
-  _error_print(error_parser, error_msg, filename, yylloc->first_line, yylloc->first_column);
+  error_print_kotlin(error_parser, error_msg, filename, yylloc->first_line, yylloc->first_column);
   FILE* file = fopen(filename, "r");
   if (file == NULL) {
     fprintf(stderr, ERROR_IO_SOURCE_FILE, filename);

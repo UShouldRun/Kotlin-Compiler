@@ -8,8 +8,12 @@
 
 // AST Types
 typedef enum {
-  ASTN_TOKEN, ASTN_EXPR, ASTN_STMT,
-  ASTN_VAR, ASTN_FUN, ASTN_ENUM,
+  ASTN_TOKEN, ASTN_KTYPE,
+  ASTN_EXPR, ASTN_EXPR_LIST,
+  ASTN_STMT,
+  ASTN_VAR, 
+  ASTN_FUN, ASTN_FUN_ARG, ASTN_FUN_RET,
+  ASTN_ENUM, ASTN_ENUM_VAL,
   ASTN_MAIN,
   ASTN_PROGRAM
 } ASTN_Type;
@@ -78,6 +82,23 @@ void          ast_print               (FILE*, AST);
 void          ast_free_tokens         (AST);
 uint64_t      astn_max_size           ();
 
+// AST Node Get Position
+
+uint32_t      astn_get_pos_first_line    (void*, ASTN_Type);
+uint32_t      astn_get_pos_last_line     (void*, ASTN_Type);
+uint32_t      astn_get_pos_first_col     (void*, ASTN_Type);
+uint32_t      astn_get_pos_last_col      (void*, ASTN_Type);
+
+// AST Node Set Position
+
+void          astn_set_pos_obj        (ASTN_Obj, uint32_t, uint32_t, uint32_t, uint32_t);
+void          astn_set_pos_enum_val   (ASTN_EnumVal, uint32_t, uint32_t, uint32_t, uint32_t);
+void          astn_set_pos_fun_arg    (ASTN_FunArg, uint32_t, uint32_t, uint32_t, uint32_t);
+void          astn_set_pos_fun_ret    (ASTN_FunRet, uint32_t, uint32_t, uint32_t, uint32_t);
+void          astn_set_pos_stmt       (ASTN_Stmt, uint32_t, uint32_t, uint32_t, uint32_t);
+void          astn_set_pos_expr       (ASTN_Expr, uint32_t, uint32_t, uint32_t, uint32_t);
+void          astn_set_pos_expr_list  (ASTN_ExprList, uint32_t, uint32_t, uint32_t, uint32_t);
+
 // AST Node Creation
 AST           ast_create              (Arena, const char*, ASTN_Obj);
 
@@ -92,7 +113,7 @@ ASTN_Stmt     astn_create_stmt_while  (Arena, bool, ASTN_Expr, ASTN_Stmt, ASTN_S
 ASTN_Stmt     astn_create_stmt_for    (Arena, ASTN_Stmt, ASTN_Expr, ASTN_Stmt, ASTN_Stmt, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_if     (Arena, ASTN_StmtType, ASTN_Expr, ASTN_Stmt, ASTN_Stmt, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_when   (Arena, ASTN_Expr, ASTN_Stmt, ASTN_Stmt);
-ASTN_Stmt     astn_create_stmt_ret    (Arena, ASTN_ExprList);
+ASTN_Stmt     astn_create_stmt_ret    (Arena, ASTN_ExprList, uint32_t);
 ASTN_Stmt     astn_create_stmt_fcall  (Arena, ASTN_Token, ASTN_ExprList, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_assign (Arena, ASTN_StmtType, ASTN_Token, ASTN_KType, ASTN_Expr, ASTN_Stmt);
 ASTN_Stmt     astn_create_stmt_block  (Arena, ASTN_Stmt, ASTN_Stmt);
@@ -104,6 +125,6 @@ ASTN_Expr     astn_create_expr_token  (Arena, ASTN_Token);
 ASTN_ExprList astn_create_expr_list   (Arena, ASTN_Expr, ASTN_ExprList);
 
 ASTN_Token    astn_create_token       (Arena, ASTN_TokenType, void*, const char*, uint32_t, uint32_t, uint32_t);
-ASTN_KType    astn_create_ktype       (Arena, bool, ASTN_KTypeDefault, ASTN_Token);
+ASTN_KType    astn_create_ktype       (Arena, bool, ASTN_KTypeDefault, ASTN_Token, uint32_t, uint32_t, uint32_t, uint32_t);
 
 #endif // !AST_H
