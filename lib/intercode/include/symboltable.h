@@ -23,7 +23,7 @@ bool        symboltable_free           (SymbolTable table);
 SymbolStack symbolstack_create         ();
 uint64_t    symbolstack_size           (SymbolStack stack);
 ASTN_Token  symbolstack_pop            (SymbolStack* stack);
-bool        symbolstack_pop_frame      (SymbolStack* stack, HashTable table);
+bool        symbolstack_pop_frame      (SymbolStack* stack, SymbolTable table);
 bool        symbolstack_push           (SymbolStack* stack, ASTN_Token token);
 bool        symbolstack_push_frame     (SymbolStack* stack);
 bool        symbolstack_is_frame       (SymbolStack stack);

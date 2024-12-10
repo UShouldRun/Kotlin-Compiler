@@ -6,6 +6,8 @@
 // ==================================================# PUBLIC #=================================================================
 
 typedef enum ic_instructions {
+  ICI_None,
+
   ICI_Arit_Add, ICI_Arit_AddI, ICI_Arit_AddU, ICI_Arit_AddIU, ICI_Arit_Sub, ICI_Arit_SubI,
   ICI_Arit_Mul, ICI_Arit_MulI, ICI_Arit_Div,
 
@@ -30,7 +32,7 @@ typedef enum address_type {
 typedef struct address *Address;
 typedef struct quad    *Quad;
 
-Quad ic_translate_ast (Arena, AST);
+Quad ic_translate_ast (Arena, AST, uint64_t, float);
 
 #endif
 

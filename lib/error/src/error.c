@@ -20,7 +20,7 @@ void _error_print(ErrorType error, const char* msg, const char* file, uint32_t l
   if (column == -1) {
     fprintf(
       stderr, "%s[FATAL]:%s %s, %s%s%s%s at %u, in %s\n",
-      colors[RED], _error_msg[error], colors[RESET],
+      colors[RED], colors[RESET], _error_msg[error],
       colors[RED], colors[UNDERLINE], msg, colors[RESET],
       line, file
     );
@@ -28,7 +28,7 @@ void _error_print(ErrorType error, const char* msg, const char* file, uint32_t l
   }
   fprintf(
     stderr, "%s[FATAL]:%s %s, %s%s%s%s at %u-%d, in %s\n",
-    colors[RED], _error_msg[error], colors[RESET],
+    colors[RED], colors[RESET], _error_msg[error], 
     colors[RED], colors[UNDERLINE], msg, colors[RESET],
     line, column, file
   );

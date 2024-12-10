@@ -55,20 +55,20 @@ bool ast_type_check(Arena arena, AST program, const char* file, uint64_t s_bucke
     NULL
   );
 
-  ast_type_check_obj(file, arena, table, readln);
-  ast_type_check_obj(file, arena, table, println);
+  ast_type_check_obj(file, arena, &table, readln);
+  ast_type_check_obj(file, arena, &table, println);
 
   for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
     if (node->type != ASTN_FUN)
-      type_check = type_check && ast_type_check_obj(file, arena, table, node);
+      type_check = type_check && ast_type_check_obj(file, arena, &table, node);
   for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
     if (node->type == ASTN_FUN)
-      type_check = type_check && ast_type_check_obj(file, arena, table, node);
+      type_check = type_check && ast_type_check_obj(file, arena, &table, node);
   for (ASTN_Obj node = program->objects; node != NULL; node = node->next)
     if (node->type == ASTN_FUN) {
       Stack stack = stack_create();
       type_check = type_check && ast_type_check_stmt(
-        file, arena, table, &stack, node->obj._fun.body, node->obj._fun.ret
+        file, arena, &table, &stack, node->obj._fun.body, node->obj._fun.ret
       );
       error_assert(error_type_checker, stack_free(&stack) && stack == NULL);
     }
@@ -764,9 +764,10 @@ ASTN_KType astn_create_ktype(
 // =======================================# PRIVATE #==========================================
 
 // AST Type Check
-bool ast_type_check_obj(const char* file, Arena arena, HashTable table, ASTN_Obj node) {
+bool ast_type_check_obj(const char* file, Arena arena, HashTable* table, ASTN_Obj node) {
   error_assert(error_type_checker, file != NULL);
   error_assert(error_type_checker, table != NULL);
+  error_assert(error_type_checker, *table != NULL);
   error_assert(error_type_checker, node != NULL);
 
   bool type_check = true;
@@ -774,7 +775,7 @@ bool ast_type_check_obj(const char* file, Arena arena, HashTable table, ASTN_Obj
     case ASTN_FUN: {
       error_assert(
         error_type_checker,
-        hashtable_insert_obj(&table, node->obj._fun.ident, node)
+        hashtable_insert_obj(table, node->obj._fun.ident, node)
       );
 
       for (
@@ -785,7 +786,7 @@ bool ast_type_check_obj(const char* file, Arena arena, HashTable table, ASTN_Obj
         type_check = type_check && ast_type_check_ktype(file, table, node_arg->type);
         error_assert(
           error_type_checker,
-          hashtable_insert_var_ktype(&table, node_arg->arg, node_arg->type)
+          hashtable_insert_var_ktype(table, node_arg->arg, node_arg->type)
         );
       }
 
@@ -801,7 +802,7 @@ bool ast_type_check_obj(const char* file, Arena arena, HashTable table, ASTN_Obj
     case ASTN_ENUM: {
       error_assert(
         error_type_checker,
-        hashtable_insert_obj(&table, node->obj._enum.ident, node)
+        hashtable_insert_obj(table, node->obj._enum.ident, node)
       );
 
       ASTN_KType ktype_enum = astn_create_ktype(
@@ -824,7 +825,7 @@ bool ast_type_check_obj(const char* file, Arena arena, HashTable table, ASTN_Obj
         }
         error_assert(
           error_type_checker,
-          hashtable_insert_var_ktype(&table, node_value->value, ktype_enum)
+          hashtable_insert_var_ktype(table, node_value->value, ktype_enum)
         );
       }
 
@@ -838,10 +839,11 @@ bool ast_type_check_obj(const char* file, Arena arena, HashTable table, ASTN_Obj
   return type_check;
 }
 
-bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* stack, ASTN_Stmt node, ASTN_FunRet ret) {
+bool ast_type_check_stmt(const char* file, Arena arena, HashTable* table, Stack* stack, ASTN_Stmt node, ASTN_FunRet ret) {
   error_assert(error_type_checker, file != NULL); 
   error_assert(error_type_checker, arena != NULL);
   error_assert(error_type_checker, table != NULL);
+  error_assert(error_type_checker, *table != NULL);
   error_assert(error_type_checker, stack != NULL);
   error_assert(error_type_checker, node != NULL);
   
@@ -855,7 +857,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         bool check_cond  = ast_type_check_expr_is_bool(file, arena, table, node->stmt._while.cond),
              check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt._while.block, ret);
         type_check = type_check && check_cond && check_block;
-        stack_pop_frame(stack, table);
+        stack_pop_frame(stack, *table);
         break;
       }
       case STMT_FOR: {
@@ -865,7 +867,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
              check_incr  = ast_type_check_stmt(file, arena, table, stack, node->stmt._for.incr, NULL),
              check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt._for.block, ret);
         type_check = type_check && check_init && check_cond && check_incr && check_block;
-        stack_pop_frame(stack, table);
+      stack_pop_frame(stack, *table);
         break;
       }
       case STMT_IF: {
@@ -873,7 +875,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         bool check_cond  = ast_type_check_expr_is_bool(file, arena, table, node->stmt._if.cond),
              check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt._if.block, ret);
         type_check = type_check && check_cond && check_block;
-        stack_pop_frame(stack, table);
+        stack_pop_frame(stack, *table);
 
         for (
           ASTN_Stmt node_stmt = node->stmt._if.next;
@@ -898,7 +900,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
           check_block = ast_type_check_stmt(file, arena, table, stack, node_stmt->stmt._if.block, ret);
           type_check  = type_check && check_cond && check_block;
 
-          stack_pop_frame(stack, table);
+          stack_pop_frame(stack, *table);
         }
 
         break;
@@ -927,7 +929,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
           stack_push_frame(stack);
           bool check_case = ast_type_check_stmt(file, arena, table, stack, node_stmt->stmt._if.block, ret);
-          stack_pop_frame(stack, table);
+          stack_pop_frame(stack, *table);
 
           check_cases = check_cases && check_cond && check_case;
         }
@@ -938,13 +940,13 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
       case STMT_BLOCK: {
         stack_push_frame(stack);
         bool check_block = ast_type_check_stmt(file, arena, table, stack, node->stmt.block, ret);
-        stack_pop_frame(stack, table);
+        stack_pop_frame(stack, *table);
 
         type_check = type_check && check_block;
         break;
       }
       case STMT_FUN_CALL: {
-        ASTN_Obj node_fun = hashtable_lookup_obj(table, node->stmt._fun_call.fun);
+        ASTN_Obj node_fun = hashtable_lookup_obj(*table, node->stmt._fun_call.fun);
         if (node_fun == NULL) {
           ast_error(
             error_type_checker,
@@ -1086,7 +1088,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
         error_assert(
           error_type_checker,
-          hashtable_insert_var_ktype(&table, node->stmt._assign.var, node->stmt._assign.ktype)
+          hashtable_insert_var_ktype(table, node->stmt._assign.var, node->stmt._assign.ktype)
         );
         error_assert(
           error_type_checker,
@@ -1113,7 +1115,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         if (!(node->stmt._assign.ktype->is_default && node->stmt._assign.ktype->type._default == KOTLIN_ANY)) {
           check_expr = ast_type_check_ktype_same(node->stmt._assign.ktype, expr_ktype); 
         } else {
-          hashtable_insert_var_ktype(&table, node->stmt._assign.var, expr_ktype);
+          hashtable_insert_var_ktype(table, node->stmt._assign.var, expr_ktype);
         }
         if (!check_expr) {
           ast_error(
@@ -1135,7 +1137,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
 
         error_assert(
           error_type_checker,
-          hashtable_insert_var_ktype(&table, node->stmt._assign.var, node->stmt._assign.ktype)
+          hashtable_insert_var_ktype(table, node->stmt._assign.var, node->stmt._assign.ktype)
         );
         error_assert(
           error_type_checker,
@@ -1146,7 +1148,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
         break;
       }
       case STMT_VAR_DIRECT_ASSIGN: {
-        ASTN_KType var_ktype = hashtable_lookup_var_ktype(table, node->stmt._assign.var);
+        ASTN_KType var_ktype = hashtable_lookup_var_ktype(*table, node->stmt._assign.var);
 
         if (var_ktype == NULL) {
           ast_error(
@@ -1165,7 +1167,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
           if (!(var_ktype->is_default && var_ktype->type._default == KOTLIN_ANY)) {
             check_expr = ast_type_check_ktype_same(var_ktype, expr_ktype); 
           } else {
-            hashtable_insert_var_ktype(&table, node->stmt._assign.var, expr_ktype);
+            hashtable_insert_var_ktype(table, node->stmt._assign.var, expr_ktype);
           }
           if (!check_expr) {
             ast_error(
@@ -1191,7 +1193,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
       }
       case STMT_VAR_INCR_BEFORE: case STMT_VAR_DECR_BEFORE:
       case STMT_VAR_INCR_AFTER:  case STMT_VAR_DECR_AFTER: {
-        ASTN_KType var_ktype = hashtable_lookup_var_ktype(table, node->stmt._assign.var);
+        ASTN_KType var_ktype = hashtable_lookup_var_ktype(*table, node->stmt._assign.var);
         if (var_ktype == NULL) {
           ast_error(
             error_type_checker,
@@ -1227,7 +1229,7 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
       }
       case STMT_VAR_EQUALS_PLUS: case STMT_VAR_EQUALS_MINUS:
       case STMT_VAR_EQUALS_MUL:  case STMT_VAR_EQUALS_DIV: {
-        ASTN_KType var_ktype = hashtable_lookup_var_ktype(table, node->stmt._assign.var);
+        ASTN_KType var_ktype = hashtable_lookup_var_ktype(*table, node->stmt._assign.var);
         if (var_ktype == NULL) {
           ast_error(
             error_type_checker,
@@ -1319,10 +1321,11 @@ bool ast_type_check_stmt(const char* file, Arena arena, HashTable table, Stack* 
   return type_check;
 }
 
-ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, ASTN_Expr node) {
+ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable* table, ASTN_Expr node) {
   error_assert(error_type_checker, file != NULL); 
   error_assert(error_type_checker, arena != NULL);
   error_assert(error_type_checker, table != NULL);
+  error_assert(error_type_checker, *table != NULL);
   error_assert(error_type_checker, node != NULL);
   ASTN_KType expr_ktype = NULL;
 
@@ -1333,7 +1336,7 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
 
       switch (token->type) {
         case TT_IDENT: {
-          token_ktype = hashtable_lookup_var_ktype(table, token);
+          token_ktype = hashtable_lookup_var_ktype(*table, token);
           break;
         }
         case TT_LIT_REAL: case TT_LIT_NUMBER:
@@ -1476,7 +1479,7 @@ ASTN_KType ast_type_check_expr(const char* file, Arena arena, HashTable table, A
       break;
     }
     case EXPR_FUN_CALL: {
-      ASTN_Obj node_fun = hashtable_lookup_obj(table, node->expr.fun_call.fun);
+      ASTN_Obj node_fun = hashtable_lookup_obj(*table, node->expr.fun_call.fun);
       if (node_fun == NULL) {
         ast_error(
           error_type_checker,
@@ -1603,7 +1606,7 @@ ASTN_KType ast_type_check_ktype_copy(Arena arena, ASTN_KType ktype) {
   return cp;
 }
 
-bool ast_type_check_expr_is_bool(const char* file, Arena arena, HashTable table, ASTN_Expr node) {
+bool ast_type_check_expr_is_bool(const char* file, Arena arena, HashTable* table, ASTN_Expr node) {
   ASTN_KType expr_ktype = ast_type_check_expr(file, arena, table, node);
   return expr_ktype != NULL && expr_ktype->is_default && expr_ktype->type._default == KOTLIN_BOOLEAN;
 }
@@ -1645,13 +1648,14 @@ bool ast_type_check_ktype_is_number(ASTN_KType node) {
   );
 }
 
-bool ast_type_check_ktype(const char* file, HashTable table, ASTN_KType ktype) {
+bool ast_type_check_ktype(const char* file, HashTable* table, ASTN_KType ktype) {
   error_assert(error_type_checker, file != NULL); 
   error_assert(error_type_checker, table != NULL);
+  error_assert(error_type_checker, *table != NULL);
   error_assert(error_type_checker, ktype != NULL);
   if (ktype->is_default)
     return true;
-  ASTN_Obj node = hashtable_lookup_obj(table, ktype->type._defined);
+  ASTN_Obj node = hashtable_lookup_obj(*table, ktype->type._defined);
   return node != NULL && node->type != ASTN_FUN;
 }
 

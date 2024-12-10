@@ -4,6 +4,7 @@
 
 #include "parser.tab.h"
 #include "error.h"
+#include "intercode.h"
 
 const char* filename;
 extern FILE* yyin;
@@ -50,6 +51,10 @@ int32_t main(int32_t argc, char* argv[]) {
   const float load_threshold_factor = 0.75;
   (void)ast_type_check(arena, ast, filename, s_buckets, load_threshold_factor);
   fprintf(stdout, KOTLIN_PASSED_TYPE_CHECK);
+
+  Quad quad_tree = ic_translate_ast(arena, ast, s_buckets, load_threshold_factor);
+  error_assert(error_intercode, quad_tree != NULL);
+  fprintf(stdout, KOTLIN_PASSED_IT_GEN);
 
   error_assert(error_unexp, arena_destroy(arena));
   yylex_destroy();
