@@ -116,7 +116,7 @@ bool hashtable_free(HashTable table) {
 }
 
 Stack stack_create() {
-  Stack root = (Stack)malloc(sizeof(struct stack_table));
+  Stack root = (Stack)malloc(sizeof(struct stack_hashtable));
   error_assert(error_mem, root != NULL);
   root->frame = true;
   root->token = NULL;
@@ -135,7 +135,7 @@ uint64_t stack_size(Stack stack) {
 bool stack_push(Stack* stack, ASTN_Token token) {
   if (stack == NULL)
     return false;
-  Stack top = (Stack)malloc(sizeof(struct stack_table));
+  Stack top = (Stack)malloc(sizeof(struct stack_hashtable));
   error_assert(error_mem, top != NULL);
   top->next  = *stack;
   top->frame = token == NULL;

@@ -11,7 +11,7 @@ typedef struct hashtable_value {
   void* node;
 } *HT_Value;
 
-struct stack_table {
+struct stack_hashtable {
   bool frame;
   ASTN_Token token;
   Stack next;

@@ -7,7 +7,7 @@
 // ==================================================# PUBLIC #=================================================================
 
 typedef HashMap HashTable;
-typedef struct stack_table *Stack;
+typedef struct stack_hashtable *Stack;
 
 HashTable  hashtable_create           (uint64_t s_buckets, float load_threshold_factor);
 

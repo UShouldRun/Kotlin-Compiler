@@ -26,7 +26,7 @@ fun main(): Int {
     c += a;
   }
 
-  println(x + a);
+  println("%d", x + a);
 
   return x - a - b / c;
 }
