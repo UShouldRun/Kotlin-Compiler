@@ -30,10 +30,19 @@ struct quad {
   Quad next;
 };
 
+// Print Translation
+void ic_print_addr(Address addr);
+
 // Translate Program
 Quad     ic_translate_func    (Arena, SymbolTable*, SymbolStack*, ASTN_Obj, uint32_t*, uint32_t*);
 Quad     ic_translate_stmt    (Arena, SymbolTable*, SymbolStack*, ASTN_Stmt, uint32_t*, uint32_t*);
-Quad     ic_translate_expr    (Arena, SymbolTable*, ASTN_Expr, uint32_t*);
+Quad     ic_translate_expr    (Arena, SymbolTable*, ASTN_Expr, Address, uint32_t*);
+
+Quad     ic_translate_println (Arena, Address, ASTN_KTypeDefault);
+Quad     ic_translate_readln  (Arena, Address, ASTN_KTypeDefault);
+
+void     ic_reset_token       (SymbolTable*, ASTN_Token);
+void     ic_pop_temp          (uint32_t*, uint32_t);
 
 uint32_t ic_get_temp          (SymbolTable*, ASTN_Token, uint32_t*);
 char*    ic_get_label         (Arena, ASTN_StmtType, uint32_t*);
@@ -41,5 +50,7 @@ Quad     ic_get_tail          (Quad);
 
 Address ic_create_address     (Arena, AddressType, void*);
 Quad    ic_create_quad        (Arena, ICI, Address, Address, Address, Quad);
+
+const char* match_instruction_to_string (ICI);
 
 #endif // !INTERCODE_PRIVATE_H

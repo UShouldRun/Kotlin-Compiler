@@ -52,6 +52,7 @@ typedef enum {
   error_parser,
   error_type_checker,
   error_intercode,
+  error_genassembly,
   error_end
 } ErrorType;
 
@@ -66,6 +67,16 @@ typedef enum {
 #define ERROR_INVALID_OBJ         "Invalid Object"
 #define ERROR_INVALID_KTYPE       "Invalid KType Default"
 #define ERROR_INVALID_ASTNT       "Invalid ASTN Type"
+
+#define ERROR_INVALID_COND_BOOL   "Invalid KType - conditional expressions must be Boolean"
+#define ERROR_INVALID_PRINTLN_USE "Invalid call of println functions - should've been handled by the TC"
+
+#define ERROR_INCOMPATIBLE_KTYPES "Type conflict - evaluated expressions and/or statements have different tyes"
+
+#define ERROR_INVALID_ADDR_T      "Invalid address type"
+
+#define ERROR_MAIN_NOT_FOUND      "main was not found"
+#define ERROR_MULT_DEF_MAIN       "main is defined more than once"
 
 #define ERROR_UNDEFINED_FUN       "Undefined function"
 #define ERROR_UNDEFINED_IDENT     "Undefined identifier"

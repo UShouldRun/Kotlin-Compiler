@@ -13,6 +13,7 @@ static const char* _error_msg[ERROR_SIZE] = {
   "Parser Error",
   "Type Check Error",
   "InterCode Generator Error",
+  "MIPS Generator Error",
   "none"
 };
 

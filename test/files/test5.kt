@@ -6,6 +6,6 @@ fun fibo(n: Int): Int {
 }
 
 fun main() {
-  println("%d", fibo(readln()));
+  println_int(fibo(readln_int()));
   return;
 }

@@ -46,6 +46,7 @@ typedef enum astn_expr_op {
 } ASTN_ExprOp;
 
 typedef enum astn_ktype_default {
+  KOTLIN_NONE = -2,
   KOTLIN_NOT_DEFAULT = -1,
   KOTLIN_DECL = 0,
   KOTLIN_ANY,

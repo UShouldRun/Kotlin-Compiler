@@ -73,7 +73,8 @@ void yyerror(YYLTYPE* yylloc, const char* error_msg);
 %token TT_LPAREN TT_RPAREN TT_LBRACE TT_RBRACE TT_LPARENRECT TT_RPARENRECT TT_SEMICOLON TT_COLON TT_COMMA TT_ASSIGN TT_ARROW TT_DOT
 %token TT_IF TT_ELSE TT_ELSEIF TT_WHEN TT_WHILE TT_FOR TT_IN TT_DO TT_FUN TT_RETURN  TT_NULL TT_ENUM
 
-%left TT_EQUALS TT_NOT_EQUALS TT_LTHAN TT_GTHAN TT_LEQUALS TT_GEQUALS TT_AND TT_OR
+%left TT_AND TT_OR
+%left TT_EQUALS TT_NOT_EQUALS TT_LTHAN TT_GTHAN TT_LEQUALS TT_GEQUALS
 %left TT_PLUS TT_MINUS
 %left TT_STAR TT_SLASH
 %right TT_BANG
@@ -490,12 +491,8 @@ kotlin_when_branch:
     { $$ = astn_create_stmt_if(arena, STMT_CASE, $1, $4, NULL, NULL); }
   | kotlin_expression TT_ARROW TT_LBRACE TT_RBRACE
     { $$ = NULL; }
-  | TT_ELSE TT_ARROW TT_LBRACE kotlin_stmt TT_RBRACE kotlin_when_branch
-    { $$ = astn_create_stmt_if(arena, STMT_ELSE, NULL, $4, $6, NULL); }
   | TT_ELSE TT_ARROW TT_LBRACE kotlin_stmt TT_RBRACE
     { $$ = astn_create_stmt_if(arena, STMT_ELSE, NULL, $4, NULL, NULL); }
-  | TT_ELSE TT_ARROW TT_LBRACE TT_RBRACE kotlin_when_branch
-    { $$ = $5; }
   | TT_ELSE TT_ARROW TT_LBRACE TT_RBRACE
     { $$ = NULL; }
   ;

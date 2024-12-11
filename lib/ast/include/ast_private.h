@@ -12,10 +12,14 @@
 #include "ast.h"
 #include "hashtable.h"
 
-#define DEFAULT_READLN  "readln"
-#define DEFAULT_PRINTLN "println"
-#define DEFAULT_INPUT   "input"
-#define DEFAULT_ARG     "arg"
+#define MAIN_FUNCTION       "main"
+
+#define DEFAULT_READLN_INT  "readln_int"
+#define DEFAULT_PRINTLN_INT "println_int"
+#define DEFAULT_READLN_STR  "readln_str"
+#define DEFAULT_PRINTLN_STR "println_str"
+#define DEFAULT_INPUT       "input"
+#define DEFAULT_ARG         "arg"
 
 #define VAR_KTYPE                  "Current variable ktype: "
 
