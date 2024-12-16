@@ -10,12 +10,8 @@ void print_mips(FILE *output, Quad head) {
         break;
       }
 
-      case ICI_StackPtrIncr: {
-        fprintf(output, "    addi sp %ld\n", q->addr1->value.offset);
-        break;
-      }
-      case ICI_StackPtrDecr: {
-        fprintf(output, "    addi sp %ld\n", q->addr1->value.offset);
+      case ICI_StackPtrIncr: case ICI_StackPtrDecr: {
+        fprintf(output, "    addi $sp %ld\n", q->addr1->value.offset);
         break;
       }
 
@@ -288,18 +284,18 @@ void translate_op(Address arg, char* reg, FILE* output) {
     case AT_Stack: {
       int64_t offset = arg->value.offset;
       if (offset == 0) {
-        sprintf(reg, "sp");
+        sprintf(reg, "$sp");
       } else {
-        sprintf(reg, "%" PRId64 "(sp)", offset);
+        sprintf(reg, "%" PRId64 "($sp)", offset);
       }
       break;
     }
     case AT_Frame: {
       int64_t offset = arg->value.offset;
       if (offset == 0) {
-        sprintf(reg, "fp");
+        sprintf(reg, "$fp");
       } else {
-        sprintf(reg, "%" PRId64 "(fp)", offset);
+        sprintf(reg, "%" PRId64 "($fp)", offset);
       }
       break;
     }
@@ -309,6 +305,10 @@ void translate_op(Address arg, char* reg, FILE* output) {
     }
     case AT_v0: {
       sprintf(reg, "$v0");
+      break;
+    }
+    case AT_a0: {
+      sprintf(reg, "$a0");
       break;
     }
     case AT_Temp: {

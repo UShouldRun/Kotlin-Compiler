@@ -112,6 +112,10 @@ void ic_print_addr(Address addr) {
       fprintf(stdout, " v0");
       break;
     }
+    case AT_a0: {
+      fprintf(stdout, " a0");
+      break;
+    }
     case AT_Ret: {
       fprintf(stdout, " ra");
       break;
@@ -309,7 +313,7 @@ Quad ic_translate_stmt(Arena arena, SymbolTable* table, SymbolStack* stack, ASTN
         tail = ic_get_tail(quad);
       }
 
-      Quad jump_back = ic_create_quad(
+     Quad jump_back = ic_create_quad(
         arena, ICI_UJ_Jump, addr_start, NULL, NULL, NULL
       );
       Quad loop_end = ic_create_quad(
@@ -790,34 +794,34 @@ Quad ic_translate_stmt(Arena arena, SymbolTable* table, SymbolStack* stack, ASTN
       ASTN_Token token = node->stmt._fun_call.fun;
 
       if (strcmp(token->value.ident, DEFAULT_PRINTLN_INT) == 0) {
-        uint32_t temp1 = ic_get_temp(temp_counter);
         Address dest1 = ic_create_address(
-          arena, AT_Temp, (void*)&temp1
+          arena, AT_a0, NULL
         );
         Quad expr = ic_translate_expr(
           arena, table, node->stmt._fun_call.args->expr, dest1, temp_counter
         );
-        ic_pop_temp(temp_counter, 1);
+
         Quad print = ic_translate_println(
           arena, dest1, KOTLIN_INT
         );
+
         Quad tail = ic_get_tail(expr);
         tail->next = print;
         return expr;
       } else if (strcmp(token->value.ident, DEFAULT_READLN_INT) == 0) {
         error_panic(error_intercode, ERROR_INVALID_READLN_USE);
       } else if (strcmp(token->value.ident, DEFAULT_PRINTLN_STR) == 0) {
-        uint32_t temp1 = ic_get_temp(temp_counter);
         Address dest1 = ic_create_address(
-          arena, AT_Temp, (void*)&temp1
+          arena, AT_a0, NULL
         );
         Quad expr = ic_translate_expr(
           arena, table, node->stmt._fun_call.args->expr, dest1, temp_counter
         );
-        ic_pop_temp(temp_counter, 1);
+
         Quad print = ic_translate_println(
           arena, dest1, KOTLIN_STRING
         );
+
         Quad tail = ic_get_tail(expr);
         tail->next = print;
         return expr;
@@ -1524,12 +1528,17 @@ Quad ic_translate_println(Arena arena, Address value, ASTN_KTypeDefault type) {
     );
   }
 
+  int64_t number = type == KOTLIN_STRING ? 4 : 1;
+  Address print_type = ic_create_address(
+    arena,
+    type == KOTLIN_STRING ? AT_String : AT_IntConst, 
+    (void*)&number
+  );
   Address v0_addr = ic_create_address(
     arena, AT_v0, NULL
   );
-
   Quad load_quad = ic_create_quad(
-    arena, ICI_DT_Move, v0_addr, value, NULL, NULL
+    arena, ICI_DT_Move, v0_addr, print_type, NULL, NULL
   );
 
   ICI syscall_code;
@@ -1564,6 +1573,19 @@ Quad ic_translate_readln(Arena arena, Address dest, ASTN_KTypeDefault type) {
     );
   }
 
+  int64_t number = type == KOTLIN_STRING ? 4 : 1;
+  Address print_type = ic_create_address(
+    arena,
+    type == KOTLIN_STRING ? AT_String : AT_IntConst, 
+    (void*)&number
+  );
+  Address v0_addr = ic_create_address(
+    arena, AT_v0, NULL
+  );
+  Quad load_quad = ic_create_quad(
+    arena, ICI_DT_Move, v0_addr, print_type, NULL, NULL
+  );
+
   ICI syscall_code;
   switch (type) {
     case KOTLIN_INT:
@@ -1577,18 +1599,15 @@ Quad ic_translate_readln(Arena arena, Address dest, ASTN_KTypeDefault type) {
       break;
   }
 
-  Address v0_addr = ic_create_address(
-    arena, AT_v0, NULL
-  );
-
   Quad syscall_quad = ic_create_quad(
     arena, syscall_code, NULL, NULL, NULL, NULL
   ),   move_quad = ic_create_quad(
     arena, ICI_DT_Move, dest, v0_addr, NULL, NULL
   );
+  load_quad->next = syscall_quad;
   syscall_quad->next = move_quad;
 
-  return syscall_quad;
+  return load_quad;
 }
 
 void ic_set_token(SymbolTable* table, ASTN_Token token, Address addr) {
@@ -1662,17 +1681,16 @@ bool ic_inst_syscall(ICI inst) {
   return inst >= ICI_Syscall_1 && inst <= ICI_Syscall_23;
 }
 
-
 Address ic_create_address(Arena arena, AddressType type, void* value) {
   error_assert(
     error_intercode,
-    value != NULL || (type == AT_Empty || type == AT_v0 || type == AT_Ret)
+    value != NULL || (type == AT_Empty || type == AT_v0 || type == AT_a0 || type == AT_Ret)
   );
   Address addr = (Address)arena_alloc(arena, sizeof(struct address));
   error_assert(error_mem, addr != NULL);
   addr->type = type;
   switch (type) {
-    case AT_Empty: case AT_v0: case AT_Ret: {
+    case AT_Empty: case AT_v0: case AT_a0: case AT_Ret: {
       break;
     }
     case AT_IntConst: {

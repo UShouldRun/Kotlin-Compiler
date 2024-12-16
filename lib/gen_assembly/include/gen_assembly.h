@@ -3,12 +3,12 @@
 
 #include "intercode_private.h"
 
-void print_mips   (FILE *output, Quad head);
+void print_mips       (FILE*, Quad);
 
-void translate_op (Address addr, char* reg, FILE* output);
-void gen_inst     (const char* instruction, Address arg1, Address arg2, Address arg3, FILE* output);
-void emit_instruction(const char* instruction, Address arg1, Address arg2, Address arg3, FILE* output);
-void emit_label   (const char* label, FILE* output);
-void emit_syscall (int syscall_num, FILE *output);
+void translate_op     (Address, char*, FILE*);
+void gen_inst         (const char*, Address, Address, Address, FILE*);
+void emit_instruction (const char*, Address, Address, Address, FILE*);
+void emit_label       (const char*, FILE*);
+void emit_syscall     (int, FILE*);
 
 #endif

@@ -41,7 +41,7 @@ typedef enum address_type {
   AT_IntConst, AT_UIntConst, AT_Char, AT_String,
   AT_Temp, AT_Label,
   AT_Stack, AT_Frame, AT_Ret,
-  AT_v0
+  AT_v0, AT_a0
 } AddressType;
 
 typedef struct address *Address;
