@@ -1,4 +1,4 @@
-# Kotlin Parser Project - TP1
+# Kotlin Parser Project
 
 ## Requirements
 To run this project make sure your system has `make`, `flex` and `bison` installed.
