@@ -2,15 +2,15 @@ fibo:
     sw $fp -4($sp) 
     sw $ra -8($sp) 
     mv $fp $sp 
-    lw $t3 12($fp) 
+    lw $t3 $fp 
     li $t4 0 
     beq $t1 $t3 $t4
-    lw $t3 12($fp) 
+    lw $t3 $fp 
     li $t4 1 
     beq $t2 $t3 $t4
     or $t0 $t1 $t2
     bne $t0 1 cond0
-    lw $t1 12($fp) 
+    lw $t1 $fp 
     mv $v0 $t1 
     mv $sp $fp 
     lw $ra -8($sp) 
@@ -20,7 +20,7 @@ fibo:
     j cond1  
 cond0:
 cond1:
-    lw $t4 12($fp) 
+    lw $t4 $fp 
     li $t5 1 
     sub $t3 $t4 $t5
     sw $t3 -4($sp) 
@@ -28,7 +28,7 @@ cond1:
     jal fibo  
     addi $sp 4
     mv $t1 $v0 
-    lw $t4 12($fp) 
+    lw $t4 $fp 
     li $t5 2 
     sub $t3 $t4 $t5
     sw $t3 -4($sp) 

@@ -198,7 +198,7 @@ Quad ic_translate_func(Arena arena, SymbolTable* table, SymbolStack* stack, ASTN
   for (int64_t i = 0; arg != NULL; arg = arg->next, i++) {
     ASTN_Token token = arg->arg;
 
-    int64_t offset = (3 + i) * SIZEOFWORD;
+    int64_t offset = i * SIZEOFWORD;
     Address arg_addr = ic_create_address(
       arena, AT_Frame, (void*)&offset
     );

@@ -10,7 +10,7 @@ sumOfFirstN:
     addi $sp -4
 loop0:
     lw $t1 -8($fp) 
-    lw $t2 12($fp) 
+    lw $t2 $fp 
     ble $t0 $t1 $t2
     bne $t0 1 loop1
     lw $t1 -4($fp) 
