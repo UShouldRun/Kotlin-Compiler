@@ -16,7 +16,7 @@ HASH_DIR   = $(LIBDIR)/hashmap
 LEXER_DIR  = $(LIBDIR)/lexer
 PARSER_DIR = $(LIBDIR)/parser
 TEST_DIR 	 = test
-ZIP 			 = COMP_TP1_T01_G13.zip
+ZIP 			 = COMP_TP2_T01_G13.zip
 
 # Include files
 ARENA_INC  = $(ARENA_DIR)/include

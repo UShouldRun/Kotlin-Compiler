@@ -5,7 +5,7 @@
 
 void print_mips       (FILE*, Quad);
 
-void translate_op     (Address, char*, FILE*);
+void translate_op     (Address, char*, FILE*, int32_t, const char*);
 void gen_inst         (const char*, Address, Address, Address, FILE*);
 void emit_instruction (const char*, Address, Address, Address, FILE*);
 void emit_label       (const char*, FILE*);

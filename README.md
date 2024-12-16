@@ -20,6 +20,7 @@ depending on if you ran `make build` or `make install`.
 
 ## Test Files
 There exist 3 test files in the folder `test/files/`.
+We couldn't test successfully on Mars4_5, because it reported a program counter error and we did not find the issue with the code. We set the stack pointer to a high memory value to fix the issue, but it doesn't seem to do it, so we left it this way.
 
 ## Project Overview
 This project implements a parser that reads a subset of Kotlin code and generates the corresponding MIPS Assembly.

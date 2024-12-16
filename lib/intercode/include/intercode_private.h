@@ -26,6 +26,7 @@ struct address {
 };
 
 struct quad {
+  bool fun_label;
   ICI inst;
   Address addr1, addr2, addr3;
   Quad next;
@@ -36,8 +37,10 @@ void ic_print_addr(Address addr);
 
 // Translate Program
 Quad     ic_translate_func    (Arena, SymbolTable*, SymbolStack*, ASTN_Obj, uint32_t*, uint32_t*);
-Quad     ic_translate_stmt    (Arena, SymbolTable*, SymbolStack*, ASTN_Stmt, uint32_t*, uint32_t*);
+Quad     ic_translate_stmt    (Arena, SymbolTable*, SymbolStack*, ASTN_Stmt, uint32_t*, uint32_t*, bool);
 Quad     ic_translate_expr    (Arena, SymbolTable*, ASTN_Expr, Address, uint32_t*);
+
+Quad     ic_exit_main         (Arena);
 
 Quad     ic_translate_println (Arena, Address, ASTN_KTypeDefault);
 Quad     ic_translate_readln  (Arena, Address, ASTN_KTypeDefault);

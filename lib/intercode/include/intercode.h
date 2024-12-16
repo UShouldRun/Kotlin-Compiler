@@ -30,8 +30,17 @@ typedef enum ic_instructions {
   ICI_Syscall_16, ICI_Syscall_17, ICI_Syscall_18, ICI_Syscall_19, ICI_Syscall_20,  
   ICI_Syscall_21, ICI_Syscall_22, ICI_Syscall_23,
 
-  ICI_Logic_BitAnd, ICI_Logic_BitAndI, ICI_Logic_BitOr, ICI_Logic_BitOrI, ICI_Logic_BitNor, ICI_Logic_BitNorI,
+  ICI_Comp_Equal,
+  ICI_Comp_NEqual,
+  ICI_Comp_LThan,
+  ICI_Comp_GThan,
+
+  ICI_Logic_BitAnd, ICI_Logic_BitAndI,
+  ICI_Logic_BitNAnd, ICI_Logic_BitNAndI,
+  ICI_Logic_BitOr, ICI_Logic_BitOrI,
+  ICI_Logic_BitNor, ICI_Logic_BitNorI,
   ICI_Logic_ShiftLeft, ICI_Logic_ShiftRight,
+  ICI_Logic_XorI,
 
   ICI_UJ_Jump, ICI_UJ_JumpRegister, ICI_UJ_JumpAndLink
 } ICI;

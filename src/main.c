@@ -19,6 +19,8 @@ AST   ast   = NULL;
 #define KOTLIN_PASSED_IT_GEN     "Intermediate Code generated\n"
 #define KOTLIN_PASSED_ASSEMBLY   "Generated assembly file\n"
 
+#define PRINT_OFF                "--print-off"
+
 void init_ast_arena(Arena* arena) {
   const uint64_t s_ast_arena = 1 << 20;
   const uint64_t s_ast_arena_nodes = 5;
@@ -33,6 +35,10 @@ int32_t main(int32_t argc, char* argv[]) {
     return 1;
   }
 
+  bool print_execution = true;
+  if (argc == 3 && strcmp(argv[2], PRINT_OFF) == 0)
+    print_execution = false;
+
   yyin = fopen(filename, "r");
   if (yyin == NULL)
     error_panic(error_io, strerror(errno));
@@ -46,7 +52,8 @@ int32_t main(int32_t argc, char* argv[]) {
     yylex_destroy();
     return 1;
   }
-  ast_print(stdout, ast);
+  if (print_execution)
+    ast_print(stdout, ast);
   fclose(yyin);
   fprintf(stdout, KOTLIN_PASSED_PARSING);
 
@@ -62,7 +69,8 @@ int32_t main(int32_t argc, char* argv[]) {
   Quad quad_tree = ic_translate_ast(arena, ast, s_buckets, load_threshold_factor);
   error_assert(error_intercode, quad_tree != NULL);
   fprintf(stdout, KOTLIN_PASSED_IT_GEN);
-  ic_print_translation(quad_tree);
+  if (print_execution)
+    ic_print_translation(quad_tree);
 
   // Unsafe
   uint64_t len = strlen(filename);

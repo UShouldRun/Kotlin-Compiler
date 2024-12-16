@@ -2,8 +2,13 @@
 #include "symboltable.h"
 #include "intercode.h"
 
-void print_mips(FILE *output, Quad head) {
+void print_mips(FILE* output, Quad head) {
+  fprintf(output, "    .text\n");
+  fprintf(output, "    .globl main\n");
   for (Quad q = head ; q != NULL ; q = q->next) {
+    if (q->fun_label)
+      fprintf(output, "\n");
+
     switch (q->inst) {
       case ICI_None: {
         error_panic(error_genassembly, "Invalid Inst");
@@ -11,7 +16,7 @@ void print_mips(FILE *output, Quad head) {
       }
 
       case ICI_StackPtrIncr: case ICI_StackPtrDecr: {
-        fprintf(output, "    addi $sp %ld\n", q->addr1->value.offset);
+        fprintf(output, "    addi $sp, $sp, %ld\n", q->addr1->value.offset);
         break;
       }
 
@@ -75,6 +80,26 @@ void print_mips(FILE *output, Quad head) {
         emit_instruction("ble", q->addr1, q->addr2, q->addr3, output);
         break;
       }
+      case ICI_Comp_Equal: {
+        emit_instruction("seq", q->addr1, q->addr2, q->addr3, output);
+        break;
+      }
+      case ICI_Comp_NEqual: {
+        emit_instruction("sne", q->addr1, q->addr2, q->addr3, output);
+        break;
+      }
+      case ICI_Comp_LThan: {
+        emit_instruction("slt", q->addr1, q->addr2, q->addr3, output);
+        break;
+      }
+      case ICI_Comp_GThan: {
+        emit_instruction("sgt", q->addr1, q->addr2, q->addr3, output);
+        break;
+      }
+      case ICI_Logic_XorI: {
+        emit_instruction("xori", q->addr1, q->addr2, q->addr3, output);
+        break;
+      }
 
       // Branch Instructions
       case ICI_Branch_Equal: {
@@ -103,7 +128,7 @@ void print_mips(FILE *output, Quad head) {
         break;
       }
       case ICI_DT_Move: {
-        emit_instruction("mv", q->addr1, q->addr2, q->addr3, output);
+        emit_instruction("move", q->addr1, q->addr2, q->addr3, output);
         break;
       }
 
@@ -132,6 +157,14 @@ void print_mips(FILE *output, Quad head) {
       }
       case ICI_Logic_BitAndI: {
         emit_instruction("andi", q->addr1, q->addr2, q->addr3, output);
+        break;
+      }
+      case ICI_Logic_BitNAnd: {
+        emit_instruction("nand", q->addr1, q->addr2, q->addr3, output);
+        break;
+      }
+      case ICI_Logic_BitNAndI: {
+        emit_instruction("nandi", q->addr1, q->addr2, q->addr3, output);
         break;
       }
       case ICI_Logic_BitOr: {
@@ -253,6 +286,15 @@ void print_mips(FILE *output, Quad head) {
         break;
       }
     }
+
+    if (
+      q->addr1 != NULL &&
+      q->addr1->type == AT_Label &&
+      strcmp(q->addr1->value.label, MAIN_FUNCTION) == 0
+    ) {
+      fprintf(output, "    la $sp, 0x7FFFFFFC\n");
+      fprintf(output, "    move $fp, $sp\n");
+    }
   }
 }
 
@@ -261,7 +303,7 @@ void emit_syscall(int syscall_num, FILE *output) {
   fprintf(output, "    syscall\n");
 }
 
-void translate_op(Address arg, char* reg, FILE* output) {
+void translate_op(Address arg, char* reg, FILE* output, int32_t i, const char* inst) {
   if (arg == NULL)
     return;
   switch (arg->type) { 
@@ -283,7 +325,7 @@ void translate_op(Address arg, char* reg, FILE* output) {
     }
     case AT_Stack: {
       int64_t offset = arg->value.offset;
-      if (offset == 0) {
+      if (offset == 0 && (i == 1 || strcmp(inst, "move") == 0)) {
         sprintf(reg, "$sp");
       } else {
         sprintf(reg, "%" PRId64 "($sp)", offset);
@@ -292,7 +334,7 @@ void translate_op(Address arg, char* reg, FILE* output) {
     }
     case AT_Frame: {
       int64_t offset = arg->value.offset;
-      if (offset == 0) {
+      if (offset == 0 && (i == 1 || strcmp(inst, "move") == 0)) {
         sprintf(reg, "$fp");
       } else {
         sprintf(reg, "%" PRId64 "($fp)", offset);
@@ -335,9 +377,15 @@ void emit_instruction(const char* inst, Address arg1, Address arg2, Address arg3
        reg2[64] = "",
        reg3[64] = "";
   
-  translate_op(arg1, reg1, output);
-  translate_op(arg2, reg2, output);
-  translate_op(arg3, reg3, output);
-  fprintf(output, "    %s %s %s %s\n", inst, reg1, reg2, reg3);
+  translate_op(arg1, reg1, output, 1, inst);
+  translate_op(arg2, reg2, output, 2, inst);
+  translate_op(arg3, reg3, output, 3, inst);
+  if (strcmp(reg2, "") != 0 && strcmp(reg3, "") != 0) {
+    fprintf(output, "    %s %s, %s, %s\n", inst, reg1, reg2, reg3);
+  } else if (strcmp(reg2, "") != 0) {
+    fprintf(output, "    %s %s, %s\n", inst, reg1, reg2);
+  } else {
+    fprintf(output, "    %s %s\n", inst, reg1);
+  }
 }
 
