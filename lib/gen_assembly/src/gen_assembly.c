@@ -5,6 +5,7 @@
 void print_mips(FILE* output, Quad head) {
   fprintf(output, "    .text\n");
   fprintf(output, "    .globl main\n");
+
   for (Quad q = head ; q != NULL ; q = q->next) {
     if (q->fun_label)
       fprintf(output, "\n");
@@ -292,7 +293,7 @@ void print_mips(FILE* output, Quad head) {
       q->addr1->type == AT_Label &&
       strcmp(q->addr1->value.label, MAIN_FUNCTION) == 0
     ) {
-      fprintf(output, "    la $sp, 0x7FFFFFFC\n");
+      // fprintf(output, "    la $sp, 0x7FFFFFFC\n");
       fprintf(output, "    move $fp, $sp\n");
     }
   }

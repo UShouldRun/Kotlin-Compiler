@@ -57,6 +57,34 @@ Quad ic_translate_ast(Arena arena, AST program, uint64_t s_buckets, float load_t
   ) {
     if (node->type != ASTN_FUN)
       error_panic(error_intercode, ERROR_NOT_IMPLEMENT_REAL);
+    if (strcmp(node->obj._fun.ident->value.ident, MAIN_FUNCTION) != 0)
+      continue;
+
+    Quad fquad = ic_translate_func(
+      arena, &table, &stack, node, &temp_counter, &label_counter
+    );
+
+    if (head == NULL) {
+      head = fquad;
+    } else {
+      tail->next = fquad;
+    }
+    tail = ic_get_tail(fquad);
+  }
+
+  Quad exit = ic_exit_main(arena);
+  tail->next = exit;
+  tail = exit;
+
+  for (
+    ASTN_Obj node = program->objects;
+    node != NULL;
+    node = node->next
+  ) {
+    if (node->type != ASTN_FUN)
+      error_panic(error_intercode, ERROR_NOT_IMPLEMENT_REAL);
+    if (strcmp(node->obj._fun.ident->value.ident, MAIN_FUNCTION) == 0)
+      continue;
 
     Quad fquad = ic_translate_func(
       arena, &table, &stack, node, &temp_counter, &label_counter
@@ -188,12 +216,21 @@ Quad ic_translate_func(Arena arena, SymbolTable* table, SymbolStack* stack, ASTN
       arena, ICI_DT_Move, frame_ptr, stack_ptr, NULL, NULL
     );
 
+    stack_offset = -8;
+    stack_ptr = ic_create_address(
+      arena, AT_Stack, (void*)&stack_offset
+    );
+    Quad stack_ptr_incr = ic_create_quad(
+      arena, ICI_StackPtrIncr, stack_ptr, NULL, NULL, NULL
+    );
+
     func_label->next = store_frame_ptr;
     store_frame_ptr->next = store_ret_addr;
     store_ret_addr->next = move_frame_2_stack;
-    tail = move_frame_2_stack;
+    move_frame_2_stack->next = stack_ptr_incr;
+    tail = stack_ptr_incr;
   }
-
+  
   int64_t s_args = 0;
   ASTN_FunArg arg = node->obj._fun.args;
   for (; arg != NULL; arg = arg->next, s_args++);
@@ -857,10 +894,10 @@ Quad ic_translate_stmt(Arena arena, SymbolTable* table, SymbolStack* stack, ASTN
 
       symbolstack_push_frame(stack);
 
-      ASTN_ExprList arg = node->stmt._fun_call.args;
-      Quad head = NULL,
-           tail = NULL;
+      Quad head = ic_store_temp(arena, temp_counter),
+           tail = ic_get_tail(head);
 
+      ASTN_ExprList arg = node->stmt._fun_call.args;
       int64_t s_args = 0;
       for (; arg != NULL; arg = arg->next, s_args++);
 
@@ -917,12 +954,16 @@ Quad ic_translate_stmt(Arena arena, SymbolTable* table, SymbolStack* stack, ASTN
         arena, ICI_StackPtrIncr, decr_s_stack, NULL, NULL, NULL
       );
 
+      Quad load_temp = ic_load_temp(arena, temp_counter);
+
       if (head == NULL) {
         head = call_func;
+        call_func->next = load_temp;
       } else {
         tail->next = stack_incr;
         stack_incr->next = call_func;
         call_func->next = stack_decr;
+        stack_decr->next = load_temp;
       }
 
       symbolstack_pop_frame(stack, *table);
@@ -1167,7 +1208,8 @@ Quad ic_translate_stmt(Arena arena, SymbolTable* table, SymbolStack* stack, ASTN
       Address zero_val = ic_create_address(
         arena, AT_UIntConst, (void*)&zero_val
       );
-      int64_t s_stack = - SIZEOFWORD * (int64_t)symbolstack_size(*stack);
+      int64_t i = is_main ? 0 : 2;
+      int64_t s_stack = - SIZEOFWORD * ((int64_t)symbolstack_size(*stack) + i);
       Address var_addr = ic_create_address(
         arena, AT_Frame, (void*)&s_stack
       );
@@ -1203,7 +1245,8 @@ Quad ic_translate_stmt(Arena arena, SymbolTable* table, SymbolStack* stack, ASTN
       );
 
       ASTN_Token token = node->stmt._assign.var;
-      int64_t s_stack = - SIZEOFWORD * (int64_t)symbolstack_size(*stack);
+      int64_t i = is_main ? 0 : 2;
+      int64_t s_stack = - SIZEOFWORD * ((int64_t)symbolstack_size(*stack) + i);
       Address var_addr = ic_create_address(
         arena, AT_Frame, (void*)&s_stack
       );
@@ -1423,29 +1466,38 @@ Quad ic_translate_expr(Arena arena, SymbolTable* table, ASTN_Expr node, Address 
         case OP_BIN_COMP_GTHAN:
           op = ICI_Comp_GThan;
           break;
+        
         case OP_BIN_COMP_LEQUAL: {
-          op = ICI_Comp_LThan;
+          ICI op = ICI_Comp_Equal;
 
-          Quad expr = ic_create_quad(
-            arena, op, dest, dest1, dest2, NULL
+          Quad less_than = ic_create_quad(
+            arena, ICI_Comp_LThan, dest, dest1, dest2, NULL
           );
-          ic_pop_temp(temp_counter, 2);
 
-          uint64_t const_value = 1;
-          Address one = ic_create_address(
-            arena, AT_UIntConst, (void*)&const_value
+          uint32_t temp = ic_get_temp(temp_counter);
+          Address dest3 = ic_create_address(
+            arena, AT_Temp, (void*)&temp
           );
-          Quad equal_comp = ic_create_quad(
-            arena, ICI_Logic_XorI, dest, dest, one, NULL
+          Quad equals = ic_create_quad(
+            arena, op, dest3, dest1, dest2, NULL
           );
-          
+
+          Quad logic_or = ic_create_quad(
+            arena, ICI_Logic_BitOr, dest, dest, equals->addr1, NULL
+          );
+
+          ic_pop_temp(temp_counter, 3);
+
           Quad tail = ic_get_tail(leftSide);
           tail->next = rightSide;
           tail = ic_get_tail(rightSide);
-          tail->next = expr;
-          expr->next = equal_comp;
+          tail->next = less_than;
+          less_than->next = equals;
+          equals->next = logic_or;
+
           return leftSide;
         }
+
         case OP_BIN_COMP_GEQUAL: {
           op = ICI_Comp_GThan;
 
@@ -1507,8 +1559,8 @@ Quad ic_translate_expr(Arena arena, SymbolTable* table, ASTN_Expr node, Address 
         );
       }
 
-      Quad head = NULL,
-           tail = NULL;
+      Quad head = ic_store_temp(arena, temp_counter),
+           tail = ic_get_tail(head);
 
       int64_t s_args = 0;
       ASTN_ExprList arg = node->expr.fun_call.args;
@@ -1567,6 +1619,8 @@ Quad ic_translate_expr(Arena arena, SymbolTable* table, ASTN_Expr node, Address 
         arena, ICI_StackPtrIncr, decr_s_stack, NULL, NULL, NULL
       );
 
+      Quad load_temp = ic_load_temp(arena, temp_counter);
+
       Address v0_addr = ic_create_address(
         arena, AT_v0, NULL
       );
@@ -1576,18 +1630,112 @@ Quad ic_translate_expr(Arena arena, SymbolTable* table, ASTN_Expr node, Address 
 
       if (head == NULL) {
         head = call_func;
-        call_func->next = func_return;
+        call_func->next = load_temp;
+        if (load_temp != NULL) {
+          tail = ic_get_tail(load_temp);
+          tail->next = func_return;
+        } else {
+          call_func->next = func_return;
+        }      
       } else {
         tail->next = stack_incr;
         stack_incr->next = call_func;
         call_func->next = stack_decr;
-        stack_decr->next = func_return;
+        stack_decr->next = load_temp;
+        if (load_temp != NULL) {
+          tail = ic_get_tail(load_temp);
+          tail->next = func_return;
+        } else {
+          stack_decr->next = func_return;
+        }
       }
 
       return head;
     }
   }
   return NULL;
+}
+
+Quad ic_store_temp(Arena arena, uint32_t* temp_counter) {
+  error_assert(error_intercode, arena != NULL);
+  error_assert(error_intercode, temp_counter != NULL);
+
+  Quad head = NULL,
+       tail = NULL;
+
+  uint32_t count = *temp_counter;
+
+  if (count > 0) {
+    int64_t offset = - SIZEOFWORD * (int64_t)count;
+    Address stack_ptr = ic_create_address(
+      arena, AT_Stack, (void*)&offset
+    );
+    head = ic_create_quad(
+      arena, ICI_StackPtrIncr, stack_ptr, NULL, NULL, NULL
+    );
+    tail = head;
+  }
+
+  error_assert(error_intercode, count <= MAX_TEMPS);
+  for (uint32_t i = 0; i < count; i++) {
+    int64_t offset = SIZEOFWORD * (int64_t)(count - 1 - i);
+    Address stack_ptr = ic_create_address(
+      arena, AT_Stack, (void*)&offset
+    ),      temp = ic_create_address(
+      arena, AT_Temp, (void*)&i
+    );
+    Quad store = ic_create_quad(
+      arena, ICI_DT_StoreWord, temp, stack_ptr, NULL, NULL
+    );
+    if (head == NULL) {
+      head = store;
+    } else {
+      tail->next = store;
+    }
+    tail = store;
+  }
+
+  return head;
+}
+
+Quad ic_load_temp(Arena arena, uint32_t* temp_counter) {
+  error_assert(error_intercode, arena != NULL);
+  error_assert(error_intercode, temp_counter != NULL);
+
+  Quad head = NULL,
+       tail = NULL;
+
+  uint32_t count = *temp_counter;
+  error_assert(error_intercode, count <= MAX_TEMPS);
+  for (uint32_t i = 0; i < count; i++) {
+    int64_t offset = SIZEOFWORD * (int64_t)(count - 1 - i);
+    Address stack_ptr = ic_create_address(
+      arena, AT_Stack, (void*)&offset
+    ),      temp = ic_create_address(
+      arena, AT_Temp, (void*)&i
+    );
+    Quad load = ic_create_quad(
+      arena, ICI_DT_LoadWord, temp, stack_ptr, NULL, NULL
+    );
+    if (head == NULL) {
+      head = load;
+    } else {
+      tail->next = load;
+    }
+    tail = load;
+  }
+ 
+  if (head != NULL) {
+    int64_t offset = SIZEOFWORD * (int64_t)count;
+    Address stack_ptr = ic_create_address(
+      arena, AT_Stack, (void*)&offset
+    );
+    tail->next = ic_create_quad(
+      arena, ICI_StackPtrIncr, stack_ptr, NULL, NULL, NULL
+    );
+  }
+
+  return head;
 }
 
 Quad ic_translate_println(Arena arena, Address value, ASTN_KTypeDefault type) {

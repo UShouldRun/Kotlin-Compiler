@@ -7,6 +7,7 @@
 // ==================================================# PRIVATE #=================================================================
 
 #define SIZEOFLABEL 20
+#define MAX_TEMPS   7
 
 #define LABEL_LOOP   "loop"
 #define LABEL_COND   "cond"
@@ -39,6 +40,9 @@ void ic_print_addr(Address addr);
 Quad     ic_translate_func    (Arena, SymbolTable*, SymbolStack*, ASTN_Obj, uint32_t*, uint32_t*);
 Quad     ic_translate_stmt    (Arena, SymbolTable*, SymbolStack*, ASTN_Stmt, uint32_t*, uint32_t*, bool);
 Quad     ic_translate_expr    (Arena, SymbolTable*, ASTN_Expr, Address, uint32_t*);
+
+Quad     ic_store_temp        (Arena, uint32_t*);
+Quad     ic_load_temp         (Arena, uint32_t*);
 
 Quad     ic_exit_main         (Arena);
 
