@@ -10,11 +10,11 @@ make all       # Build the project
 make install   # Install the target binary (optional)
 ```
 
-## Running the Parser and AST Print
-To see the created AST, run
+## Running the Compiler
+To see the created AST, Intermediate Code and resulting MIPS Assembly
 ```bash
-kotlin.o file.kt
-kotlin   file.kt
+build/kotlin.o file.kt
+bin/kotlin file.kt
 ```
 depending on if you ran `make build` or `make install`.
 
@@ -22,7 +22,8 @@ depending on if you ran `make build` or `make install`.
 There exist 3 test files in the folder `test/files/`.
 
 ## Project Overview
-This project implements a parser that reads a subset of Kotlin code and generates an Abstract Syntax Tree (AST). The subset of Kotlin supported includes specific expressions, commands, and structures, as detailed below.
+This project implements a parser that reads a subset of Kotlin code and generates the corresponding MIPS Assembly.
+The subset of Kotlin supported includes specific expressions, commands, and structures, as detailed below.
 
 ## Supported Language Constructs
 
@@ -49,7 +50,7 @@ This project implements a parser that reads a subset of Kotlin code and generate
 - Return statements: Return expressions to terminate function execution
 - When statements: when branch support for multi-condition checks
 
-### Type Definitions
+### Type Definitions (Note: not implemented in the assembly, only in the AST)
 - Basic types: Support for various Kotlin types
 - Enums: Block structure for defining enumerations within the program
 
