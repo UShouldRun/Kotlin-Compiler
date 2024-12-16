@@ -9,8 +9,6 @@
 
 const char* filename;
 extern FILE* yyin;
-
-// extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
 extern int yylex_destroy(void);
 
 Arena arena = NULL;
@@ -66,18 +64,18 @@ int32_t main(int32_t argc, char* argv[]) {
   fprintf(stdout, KOTLIN_PASSED_IT_GEN);
   ic_print_translation(quad_tree);
 
-  /*
   // Unsafe
   uint64_t len = strlen(filename);
   char output_name[256];
   strncpy(output_name, filename, len - 3);
-  output_name[len - 3] = '\0';
+  output_name[len - 3] = '.';
+  output_name[len - 2] = 's';
+  output_name[len - 1] = '\0';
 
   FILE* output = fopen(output_name, "w");
   print_mips(output, quad_tree);
 
   fclose(output);
-  */
 
   error_assert(error_unexp, arena_destroy(arena));
   yylex_destroy();

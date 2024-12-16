@@ -9,34 +9,34 @@ uint64_t symboltable_size(SymbolTable table) {
   return hashmap_size(table);
 }
 
-int32_t symboltable_lookup_ident(SymbolTable table, ASTN_Token token) {
+Address symboltable_lookup_ident_addr(SymbolTable table, ASTN_Token token) {
   error_assert(error_intercode, table != NULL);
   error_assert(error_intercode, token != NULL);
-  int32_t* temp = (int32_t*)hashmap_get(table, (char*)token->value.ident);
-  error_assert(error_intercode, temp != NULL);
-  return *temp;
+  Address addr = (Address)hashmap_get(table, (char*)token->value.ident);
+  error_assert(error_intercode, addr != NULL);
+  return addr;
 }
 
-int32_t symboltable_remove_ident(SymbolTable table, ASTN_Token token) {
+static void _symboltable_free_value(void* ptr) {
+  return;
+}
+
+Address symboltable_remove_ident(SymbolTable table, ASTN_Token token) {
   error_assert(error_intercode, table != NULL);
   error_assert(error_intercode, token != NULL);
-  int32_t* _temp = (int32_t*)hashmap_get(table, (char*)token->value.ident);
-  error_assert(error_intercode, _temp != NULL);
-  int32_t temp = *_temp;
+  Address addr = (Address)hashmap_get(table, (char*)token->value.ident);
+  error_assert(error_intercode, addr != NULL);
   error_assert(
     error_type_checker,
-    hashmap_remove(table, (char*)(token->value.ident), NULL)
+    hashmap_remove(table, (char*)(token->value.ident), _symboltable_free_value)
   );
-  return temp;
+  return addr;
 }
 
-bool symboltable_insert_ident(SymbolTable* table, ASTN_Token token, int32_t temp) {
+bool symboltable_insert_ident(SymbolTable* table, ASTN_Token token, Address addr) {
   error_assert(error_intercode, table != NULL);
   error_assert(error_intercode, token != NULL);
-  int32_t* _temp = (int32_t*)malloc(sizeof(int32_t));
-  error_assert(error_mem, _temp != NULL);
-  *_temp = temp;
-  return hashmap_insert(table, (char*)(token->value.ident), (void*)_temp, NULL);
+  return hashmap_insert(table, (char*)(token->value.ident), (void*)addr, _symboltable_free_value);
 }
 
 bool symboltable_exists_ident(SymbolTable table, ASTN_Token token) {
@@ -93,16 +93,20 @@ ASTN_Token symbolstack_pop(SymbolStack* stack) {
   return token;
 }
 
-bool symbolstack_pop_frame(SymbolStack* stack, SymbolTable table) {
+int64_t symbolstack_pop_frame(SymbolStack* stack, SymbolTable table) {
   if (stack == NULL)
     return false;
-  while (!(*stack)->frame)
+
+  int64_t s_frame = 0;
+  for (; !(*stack)->frame; s_frame += SIZEOFWORD)
     (void)symboltable_remove_ident(table, stack_pop(stack));
+
   SymbolStack node = *stack;
   error_assert(error_unexp, node != NULL);
   *stack = node->next;
   free(node);
-  return true;
+
+  return s_frame;
 }
 
 bool symbolstack_is_frame(SymbolStack stack) {

@@ -178,7 +178,7 @@ $(DIRS):
 
 # Clean rule
 clean:
-	@rm -f $(BUILDDIR)/*.o $(ARENA_DIR)/build/* $(AST_DIR)/build/* $(ERROR_DIR)/build/* $(GEN_A_DIR)/build/* $(INTER_DIR)/build/* $(HASH_DIR)/build/* $(LEXER_DIR)/build/*.c $(PARSER_DIR)/build/* $(TARGET)
+	@rm -f $(BINDIR)/* $(BUILDDIR)/*.o $(ARENA_DIR)/build/* $(AST_DIR)/build/* $(ERROR_DIR)/build/* $(GEN_A_DIR)/build/* $(INTER_DIR)/build/* $(HASH_DIR)/build/* $(LEXER_DIR)/build/*.c $(PARSER_DIR)/build/* $(TARGET)
 	@if ls *.zip 1> /dev/null 2>&1; then \
 		rm -f *.zip; \
 	fi

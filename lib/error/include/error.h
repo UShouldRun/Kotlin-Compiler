@@ -70,10 +70,12 @@ typedef enum {
 
 #define ERROR_INVALID_COND_BOOL   "Invalid KType - conditional expressions must be Boolean"
 #define ERROR_INVALID_PRINTLN_USE "Invalid call of println functions - should've been handled by the TC"
+#define ERROR_INVALID_READLN_USE "Invalid call of readln functions - should've been handled by the TC"
 
 #define ERROR_INCOMPATIBLE_KTYPES "Type conflict - evaluated expressions and/or statements have different tyes"
 
 #define ERROR_INVALID_ADDR_T      "Invalid address type"
+#define ERROR_INVALID_ADDRESS     "Invalid Address Type"
 
 #define ERROR_MAIN_NOT_FOUND      "main was not found"
 #define ERROR_MULT_DEF_MAIN       "main is defined more than once"
@@ -91,6 +93,8 @@ typedef enum {
 #define ERROR_TYPE_MANY_RET       "Too many values returned by the current function"
 
 #define ERROR_NOT_IMPLEMENT_RET   "Not implemented multiple return values in this version of the compiler"
+#define ERROR_NOT_IMPLEMENT_NFUN  "Only implemented functions in intercode generation"
+#define ERROR_NOT_IMPLEMENT_REAL  "LONG FLOAT DOUBLE inter code not implemented"
 
 #define ERROR_IO_SOURCE_FILE      "[ERROR]: Could not open file %s for error display.\n"
 

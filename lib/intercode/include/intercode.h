@@ -2,11 +2,17 @@
 #define INTERCODE_H
 
 #include "ast_private.h"
+#include "inttypes.h"
 
-// ==================================================# PUBLIC #=================================================================
+// ==================================================# PUBLIC #==================================================================
+
+#define SIZEOFWORD 4
 
 typedef enum ic_instructions {
   ICI_None,
+
+  ICI_StackPtrIncr,
+  ICI_StackPtrDecr,
 
   ICI_Arit_Add, ICI_Arit_AddI, ICI_Arit_AddU, ICI_Arit_AddIU, ICI_Arit_Sub, ICI_Arit_SubI,
   ICI_Arit_Mul, ICI_Arit_MulI, ICI_Arit_Div,
@@ -33,7 +39,9 @@ typedef enum ic_instructions {
 typedef enum address_type {
   AT_Empty,
   AT_IntConst, AT_UIntConst, AT_Char, AT_String,
-  AT_Temp, AT_Label
+  AT_Temp, AT_Label,
+  AT_Stack, AT_Frame, AT_Ret,
+  AT_v0
 } AddressType;
 
 typedef struct address *Address;
