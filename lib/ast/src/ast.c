@@ -2172,7 +2172,7 @@ void ast_print_token(FILE* file, ASTN_Token token) {
       fprintf(file, "STRING(%s)", token->value.lit_str);
       break;
     case TT_LIT_NUMBER:
-      fprintf(file, "NUMBER(%zu)", token->value.lit_number);
+      fprintf(file, "NUMBER(%ld)", token->value.lit_number);
       break;
     case TT_LIT_REAL:
       fprintf(file, "REAL(%.6lf)", token->value.lit_real);

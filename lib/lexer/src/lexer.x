@@ -26,8 +26,8 @@ digit      [0-9]
 hexa       ([0-9]|[a-f])
 HEXA       ([0-9]|[A-F])
 number_h   0(x{hexa}|X{HEXA})+
-number     {digit}+
-real       ({digit}+\.{digit}?|{digit}?\.{digit}+)(e((-)?{digit}+))?
+number     \-?{digit}+
+real       (\-?{digit}+\.{digit}?|{digit}?\.{digit}+)(e((-)?{digit}+))?
 id         {alpha}({alpha}|{digit})*
 string     \"([^\\"]|\\.)*\"
 whitespace [ \t\r]+
